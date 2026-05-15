@@ -1,0 +1,3105 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>VoltDrive</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Montserrat:wght@600;700;800&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<style>
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
+  .glass-card { background: rgba(30,30,30,0.6); backdrop-filter: blur(20px); }
+  body { background-color: #131313; color: #e5e2e1; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  .donut-ring { transition: stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1); }
+
+  @keyframes slideDown { from{transform:translateY(-100%);opacity:0} to{transform:translateY(0);opacity:1} }
+  @keyframes slideUp   { from{transform:translateY(0);opacity:1}    to{transform:translateY(-100%);opacity:0} }
+  .transfer-banner { animation: slideDown 0.4s cubic-bezier(0.4,0,0.2,1) forwards; }
+  .transfer-banner.hiding { animation: slideUp 0.4s cubic-bezier(0.4,0,0.2,1) forwards; }
+
+  .transfer-bar-fill {
+    background: linear-gradient(90deg,#00eefc,#bd00ff);
+    box-shadow: 0 0 10px rgba(0,238,252,0.5),0 0 20px rgba(189,0,255,0.3);
+    transition: width 0.4s ease;
+  }
+
+  .action-dl:hover  { color:#00eefc;background:rgba(0,238,252,0.1);border-color:rgba(0,238,252,0.3); }
+  .action-del:hover { color:#ffb4ab;background:rgba(255,180,171,0.1);border-color:rgba(255,180,171,0.3); }
+  .action-zip:hover { color:#94db00;background:rgba(148,219,0,0.1);border-color:rgba(148,219,0,0.3); }
+
+  @keyframes donutPulse {
+    0%,100%{filter:drop-shadow(0 0 6px rgba(0,238,252,0.4)) drop-shadow(0 0 12px rgba(189,0,255,0.3))}
+    50%{filter:drop-shadow(0 0 12px rgba(0,238,252,0.7)) drop-shadow(0 0 20px rgba(189,0,255,0.5))}
+  }
+  .donut-glow { animation: donutPulse 3s ease-in-out infinite; }
+
+  /* Gauge glow classes — swapped dynamically by JS */
+  .gauge-glow-green  { filter: drop-shadow(0 0 10px rgba(34,197,94,0.35))  drop-shadow(0 0 22px rgba(34,197,94,0.18));  }
+  .gauge-glow-yellow { filter: drop-shadow(0 0 10px rgba(250,204,21,0.4))  drop-shadow(0 0 22px rgba(250,204,21,0.2));  }
+  .gauge-glow-red    { filter: drop-shadow(0 0 10px rgba(248,113,113,0.45)) drop-shadow(0 0 22px rgba(239,68,68,0.25)); }
+
+  .sidebar-tab {
+    display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:4px;cursor:pointer;
+    font-size:11px;font-weight:700;letter-spacing:0.04em;border:1px solid transparent;
+    transition:all 0.15s ease;color:#9d8ba0;position:relative;
+  }
+  .sidebar-tab:hover { background:rgba(255,255,255,0.05);color:#e5e2e1; }
+  .sidebar-tab.active { background:rgba(236,178,255,0.12);border-color:rgba(236,178,255,0.35);color:#ecb2ff; }
+  .sidebar-tab .tab-close { opacity:0;margin-left:auto;padding:1px;border-radius:2px;transition:opacity 0.1s;font-size:12px; }
+  .sidebar-tab:hover .tab-close { opacity:1; }
+  .sidebar-tab.active .tab-close { opacity:0.6; }
+  .sidebar-tab.active .tab-close:hover { opacity:1;color:#ffb4ab; }
+
+  .tree-node { user-select:none; }
+  .tree-node .node-row { display:flex;align-items:center;gap:4px;padding:3px 6px;border-radius:4px;cursor:pointer;transition:background 0.1s; }
+  .tree-node .node-row:hover { background:rgba(255,255,255,0.06); }
+  .tree-node .node-row.selected { background:rgba(236,178,255,0.12); }
+  .tree-children { border-left:1px solid rgba(255,255,255,0.08);margin-left:10px;padding-left:6px; }
+
+  .file-viewer-card {
+    display:flex;align-items:flex-start;gap:20px;background:rgba(30,30,30,0.7);
+    border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:20px;
+    max-width:560px;width:100%;backdrop-filter:blur(20px);
+    flex-direction:column;
+  }
+  @media (min-width:480px) {
+    .file-viewer-card { flex-direction:row; align-items:center; gap:28px; padding:32px 36px; }
+  }
+
+  /* File list scrollable body */
+  #files-table-body-2::-webkit-scrollbar { width: 4px; }
+  #files-table-body-2::-webkit-scrollbar-track { background: transparent; }
+  #files-table-body-2::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+  #files-table-body-2::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+  /* File cards — replace old grid table */
+  .file-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    transition: background 0.1s;
+    cursor: pointer;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .file-card:hover { background: rgba(255,255,255,0.04); }
+  .file-card:last-child { border-bottom: none; }
+  .file-card-meta { color:#9d8ba0; font-size:10px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  /* Actions always visible on mobile, hover on desktop */
+  .file-card .fc-actions { opacity:1; transition:opacity 0.12s; flex-shrink:0; }
+  @media (min-width: 768px) {
+    .file-card .fc-actions { opacity:0; }
+    .file-card:hover .fc-actions { opacity:1; }
+    .file-card { gap:12px; padding:10px 14px; }
+  }
+
+  @keyframes starGlow {
+    0%,100%{filter:drop-shadow(0 0 4px rgba(244,197,66,0.6)) drop-shadow(0 0 8px rgba(244,197,66,0.3))}
+    50%{filter:drop-shadow(0 0 8px rgba(244,197,66,0.9)) drop-shadow(0 0 16px rgba(244,197,66,0.5))}
+  }
+  .star-glow-active { animation: starGlow 2.5s ease-in-out infinite; }
+
+  #sidebar-tabs-container { flex:1;overflow-y:auto;overflow-x:hidden; }
+  #sidebar-tabs-container::-webkit-scrollbar { width:3px; }
+  #sidebar-tabs-container::-webkit-scrollbar-track { background:transparent; }
+  #sidebar-tabs-container::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1);border-radius:2px; }
+
+  #mobile-tab-bar {
+    display:flex;align-items:center;gap:4px;overflow-x:auto;overflow-y:hidden;
+    padding:0 12px;height:36px;background:rgba(14,14,14,0.97);
+    border-bottom:1px solid rgba(255,255,255,0.06);
+    -ms-overflow-style:none;scrollbar-width:none;
+  }
+  #mobile-tab-bar::-webkit-scrollbar { display:none; }
+  .mobile-tab {
+    display:inline-flex;align-items:center;gap:5px;padding:3px 8px 3px 7px;
+    border-radius:4px;border:1px solid rgba(255,255,255,0.07);white-space:nowrap;
+    cursor:pointer;font-size:10px;font-weight:700;letter-spacing:0.03em;color:#9d8ba0;
+    transition:all 0.15s;flex-shrink:0;background:rgba(255,255,255,0.04);
+  }
+  .mobile-tab:hover { color:#e5e2e1;background:rgba(255,255,255,0.07); }
+  .mobile-tab.active { background:rgba(236,178,255,0.12);border-color:rgba(236,178,255,0.35);color:#ecb2ff; }
+  .mobile-tab .mt-close { font-size:11px;opacity:0.5;margin-left:1px; }
+  .mobile-tab:hover .mt-close,.mobile-tab.active .mt-close { opacity:0.85; }
+
+  #settings-dropdown {
+    position:absolute;top:calc(100% + 6px);right:0;min-width:210px;
+    background:rgba(18,18,18,0.98);backdrop-filter:blur(24px);
+    border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:6px;
+    box-shadow:0 12px 40px rgba(0,0,0,0.7);z-index:200;
+  }
+  .settings-item {
+    display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:5px;
+    cursor:pointer;font-size:11px;font-weight:700;letter-spacing:0.04em;color:#9d8ba0;
+    transition:all 0.12s;border:1px solid transparent;
+  }
+  .settings-item:hover { background:rgba(255,255,255,0.06);color:#e5e2e1; }
+  .settings-item.cyan  { color:#00eefc; }
+  .settings-item.cyan:hover  { background:rgba(0,238,252,0.08);border-color:rgba(0,238,252,0.2); }
+  .settings-item.purple { color:#ecb2ff; }
+  .settings-item.purple:hover { background:rgba(236,178,255,0.08);border-color:rgba(236,178,255,0.2); }
+  .settings-item.green { color:#94db00; }
+  .settings-item.green:hover { background:rgba(148,219,0,0.08);border-color:rgba(148,219,0,0.2); }
+  .settings-divider { height:1px;background:rgba(255,255,255,0.06);margin:4px 0; }
+
+  @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+
+  @keyframes fieldRingPulse {
+    0%{opacity:0;transform:scale(0.7);filter:blur(0px)} 12%{opacity:1;transform:scale(1);filter:blur(0px)}
+    60%{opacity:0.75;transform:scale(1.08);filter:blur(0.4px)} 100%{opacity:0;transform:scale(1.32);filter:blur(1px)}
+  }
+  @keyframes fieldArcBuzz {
+    0%{opacity:0;stroke-dashoffset:80} 10%{opacity:1} 75%{opacity:0.6;stroke-dashoffset:0} 100%{opacity:0;stroke-dashoffset:-30}
+  }
+  @keyframes iconPulse {
+    0%,100%{filter:drop-shadow(0 0 10px rgba(0,238,252,0.7)) drop-shadow(0 0 24px rgba(189,0,255,0.5));transform:scale(1)}
+    50%{filter:drop-shadow(0 0 22px rgba(0,238,252,1)) drop-shadow(0 0 50px rgba(189,0,255,0.9));transform:scale(1.12)}
+  }
+  @keyframes successTickDraw {
+    0%{stroke-dashoffset:60;opacity:0} 20%{opacity:1} 100%{stroke-dashoffset:0;opacity:1}
+  }
+  @keyframes successCircleIn {
+    0%{transform:scale(0.4);opacity:0} 60%{transform:scale(1.12);opacity:1} 100%{transform:scale(1);opacity:1}
+  }
+  @keyframes successRingExpand {
+    0%{transform:scale(1);opacity:0.9} 100%{transform:scale(2.6);opacity:0}
+  }
+  .field-ring {
+    transform-origin:170px 170px;animation:fieldRingPulse 1.8s ease-out infinite;
+    animation-delay:var(--d);opacity:0;
+  }
+  .field-arc { stroke-dasharray:80;animation:fieldArcBuzz 1.8s ease-in-out infinite;animation-delay:var(--d);opacity:0; }
+  .dz-uploading #dz-icon-wrap {
+    animation:iconPulse 1.1s ease-in-out infinite;
+    border-color:rgba(0,238,252,0.7)!important;background:rgba(189,0,255,0.15)!important;
+    box-shadow:0 0 30px rgba(0,238,252,0.35),0 0 60px rgba(189,0,255,0.2)!important;
+  }
+  .dz-uploading { border-color:rgba(0,238,252,0.6)!important;background:rgba(0,238,252,0.04); }
+  .dz-success #dz-icon-wrap {
+    border-color:rgba(80,220,100,0.8)!important;background:rgba(80,220,100,0.12)!important;
+    transition:border-color 0.3s,background 0.3s!important;
+  }
+
+  @media(min-width:768px) { #mobile-tab-bar { display:none!important; } }
+
+  /* ── Notifications panel ── */
+  #notif-panel {
+    position:fixed;top:0;right:0;bottom:0;width:min(320px, 100vw);
+    background:rgba(13,13,13,0.98);backdrop-filter:blur(30px);
+    border-left:1px solid rgba(255,255,255,0.08);
+    z-index:300;transform:translateX(100%);transition:transform 0.28s cubic-bezier(0.4,0,0.2,1);
+    display:flex;flex-direction:column;
+  }
+  #notif-panel.open { transform:translateX(0); }
+  .notif-entry {
+    display:flex;align-items:flex-start;gap:10px;padding:10px 14px;
+    border-bottom:1px solid rgba(255,255,255,0.04);
+    transition:background 0.1s;
+  }
+  .notif-entry:hover { background:rgba(255,255,255,0.03); }
+  .notif-badge-dot {
+    width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:4px;
+  }
+  /* Capacity warning badge on notification bell */
+  #notif-btn-badge {
+    position:absolute;top:2px;right:2px;width:8px;height:8px;
+    background:#ffb4ab;border-radius:50%;border:1.5px solid #131313;
+    display:none;
+  }
+
+  /* Rename input */
+  .rename-input {
+    background:rgba(30,30,30,0.9);border:1px solid rgba(236,178,255,0.4);
+    color:#e5e2e1;border-radius:4px;padding:2px 6px;font-size:12px;
+    font-family:Montserrat,sans-serif;font-weight:700;outline:none;
+    width:160px;
+  }
+
+  /* Loading spinner overlay */
+  @keyframes spinFull { to { transform: rotate(360deg); } }
+  .spin-icon { display:inline-block;animation:spinFull 0.9s linear infinite; }
+
+  /* Capacity warning bar */
+  .capacity-warn-bar {
+    background:rgba(255,180,171,0.08);border:1px solid rgba(255,180,171,0.25);
+    border-radius:6px;padding:8px 12px;margin-bottom:12px;
+    display:flex;align-items:center;gap:8px;
+    animation:fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
+
+  /* ═══════════════════════════════════
+     FILE PREVIEW VIEW
+     ═══════════════════════════════════ */
+  #view-file-preview {
+    flex-direction:column;
+    /* mobile: viewport - 88px topnav/tabbar - 16px main pt-4 - 16px bottom gap */
+    height:calc(100vh - 88px - 32px);
+    gap:0;overflow:hidden;
+  }
+  #view-file-preview:not(.hidden) { display:flex; }
+  @media(min-width:768px) {
+    /* desktop: viewport - 52px topnav - 16px pt-4 - 16px bottom gap */
+    #view-file-preview { height:calc(100vh - 52px - 32px); }
+  }
+  .fp-header {
+    display:flex;align-items:center;gap:8px;padding:8px 12px;
+    background:rgba(20,20,20,0.8);border-bottom:1px solid rgba(255,255,255,0.07);
+    flex-shrink:0;min-width:0;
+  }
+  .fp-header-title {
+    flex:1;min-width:0;font-size:12px;font-weight:700;
+    font-family:Montserrat,sans-serif;color:#e5e2e1;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .fp-content {
+    flex:1;min-height:0;overflow:hidden;position:relative;
+    background:rgba(14,14,14,0.6);
+  }
+  .fp-content-inner {
+    width:100%;height:100%;overflow:auto;
+    display:flex;align-items:flex-start;justify-content:center;
+  }
+  .fp-content-inner.fp-center { align-items:center; }
+  .fp-img {
+    max-width:100%;max-height:100%;object-fit:contain;
+    display:block;cursor:zoom-in;border-radius:4px;
+  }
+  .fp-video {
+    max-width:100%;max-height:100%;background:#000;
+    border-radius:4px;display:block;
+  }
+  .fp-audio-wrap {
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:16px;padding:32px 20px;width:100%;
+  }
+  .fp-audio-art {
+    width:clamp(100px,28vw,150px);height:clamp(100px,28vw,150px);
+    border-radius:16px;border:1px solid rgba(0,238,252,0.2);
+    background:rgba(0,238,252,0.06);
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 0 40px rgba(0,238,252,0.08);
+  }
+  .fp-audio-waves { display:flex;align-items:center;gap:3px;height:28px;padding:0 6px; }
+  .fp-audio-wave-bar {
+    width:3px;border-radius:2px;background:rgba(0,238,252,0.4);
+    animation:waveAnim 1.2s ease-in-out infinite;
+  }
+  @keyframes waveAnim {
+    0%,100%{transform:scaleY(0.3);opacity:0.4} 50%{transform:scaleY(1);opacity:0.9}
+  }
+  audio { width:min(380px, 90vw);border-radius:8px; }
+  .fp-pdf { width:100%;height:100%;border:none;display:block; }
+  .fp-code-wrap { width:100%;min-height:100%;padding:14px;box-sizing:border-box; }
+  .fp-code-block {
+    font-family:'Courier New',Courier,monospace;font-size:12px;
+    line-height:1.6;color:#e5e2e1;margin:0;
+    white-space:pre;overflow-x:auto;tab-size:2;
+    background:transparent;border:none;outline:none;counter-reset:ln;
+  }
+  .fp-code-block .ln {
+    display:inline-block;user-select:none;color:rgba(255,255,255,0.2);
+    width:32px;text-align:right;margin-right:14px;font-size:11px;
+  }
+  .hljs { background:transparent!important;padding:0!important; }
+  .fp-csv-wrap { width:100%;padding:12px;box-sizing:border-box; }
+  .fp-csv-table { border-collapse:collapse;width:100%;font-size:11px; }
+  .fp-csv-table th {
+    background:rgba(236,178,255,0.1);color:#ecb2ff;font-weight:700;
+    padding:6px 10px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.1);
+    font-size:10px;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;
+    position:sticky;top:0;z-index:1;
+  }
+  .fp-csv-table td {
+    padding:5px 10px;border-bottom:1px solid rgba(255,255,255,0.04);
+    color:#e5e2e1;white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis;
+  }
+  .fp-csv-table tr:hover td { background:rgba(255,255,255,0.03); }
+  .fp-csv-notice { font-size:10px;color:#9d8ba0;margin-top:8px;padding:0 4px; }
+  .fp-placeholder {
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:12px;padding:40px 24px;text-align:center;width:100%;
+  }
+  .fp-placeholder-icon-wrap {
+    width:76px;height:76px;border-radius:18px;
+    display:flex;align-items:center;justify-content:center;
+    border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);
+  }
+  .fp-infobar {
+    display:flex;align-items:center;justify-content:space-between;gap:8px;
+    padding:8px 12px;background:rgba(18,18,18,0.98);
+    border-top:1px solid rgba(255,255,255,0.07);flex-shrink:0;
+    flex-wrap:wrap;row-gap:6px;
+    /* never slide under the bottom nav on any device */
+    padding-bottom:max(8px, env(safe-area-inset-bottom, 8px));
+  }
+  .fp-infobar-meta { display:flex;align-items:center;gap:6px;flex-wrap:wrap; }
+  .fp-infobar-actions { display:flex;align-items:center;gap:6px;flex-shrink:0; }
+  .fp-btn {
+    display:inline-flex;align-items:center;gap:5px;
+    padding:5px 12px;border-radius:5px;font-size:10px;font-weight:700;
+    letter-spacing:0.04em;cursor:pointer;transition:all 0.15s;border:1px solid;
+    font-family:Montserrat,sans-serif;text-decoration:none;background:none;
+  }
+  .fp-btn-dl { color:#00eefc;border-color:rgba(0,238,252,0.35);background:rgba(0,238,252,0.08)!important; }
+  .fp-btn-dl:hover { background:rgba(0,238,252,0.18)!important; }
+  .fp-btn-del { color:#ffb4ab;border-color:rgba(255,180,171,0.3);background:rgba(255,180,171,0.06)!important; }
+  .fp-btn-del:hover { background:rgba(255,180,171,0.15)!important; }
+  .fp-btn-back { color:#9d8ba0;border-color:rgba(255,255,255,0.1);background:rgba(255,255,255,0.04)!important; }
+  .fp-btn-back:hover { color:#e5e2e1;background:rgba(255,255,255,0.08)!important; }
+  .fp-badge {
+    padding:2px 8px;border-radius:100px;font-size:9px;font-weight:700;
+    letter-spacing:0.06em;text-transform:uppercase;
+  }
+  #fp-lightbox {
+    position:fixed;inset:0;z-index:600;background:rgba(0,0,0,0.92);
+    display:flex;align-items:center;justify-content:center;
+    backdrop-filter:blur(8px);cursor:zoom-out;
+    opacity:0;pointer-events:none;transition:opacity 0.2s;
+  }
+  #fp-lightbox.open { opacity:1;pointer-events:all; }
+  #fp-lightbox img {
+    max-width:94vw;max-height:92vh;object-fit:contain;
+    border-radius:4px;cursor:default;box-shadow:0 0 80px rgba(0,0,0,0.8);
+  }
+  #fp-lightbox-close {
+    position:absolute;top:14px;right:14px;
+    background:rgba(30,30,30,0.8);border:1px solid rgba(255,255,255,0.12);
+    border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;
+    cursor:pointer;color:#e5e2e1;transition:background 0.15s;z-index:10;
+  }
+  #fp-lightbox-close:hover { background:rgba(60,60,60,0.9); }
+  @media(max-width:480px) {
+    .fp-code-block { font-size:11px; }
+    .fp-csv-table { font-size:10px; }
+    .fp-infobar { padding:6px 10px; }
+    .fp-btn { padding:4px 9px;font-size:9px; }
+  }
+
+  /* ── Mobile bottom nav: show as flex on mobile, completely gone on desktop ── */
+  #mob-nav { display:flex; }
+  @media(min-width:768px) { #mob-nav { display:none !important; } }
+
+  /* ── Main content: correct padding on all breakpoints ── */
+  /* Mobile: top = 52px header + 36px tab bar. Bottom = 60px mob nav. Side padding added. */
+  #main-content {
+    padding-top: 88px;
+    padding-bottom: 72px;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  @media(min-width:768px) {
+    /* Desktop: sidebar is 224px. Top = 52px header only. No bottom nav. */
+    #main-content {
+      margin-left: 224px;
+      padding-top: 68px;
+      padding-bottom: 16px;
+      padding-left: 16px;
+      padding-right: 16px;
+    }
+  }
+
+  /* ── File preview: sandwiched between topnav and bottom nav ── */
+  /* Mobile: 100vh - 88px top - 72px bottom nav - 8px breathing room */
+  #view-file-preview { height: calc(100vh - 88px - 72px); min-height: 260px; }
+  @media(min-width:768px) {
+    /* Desktop: 100vh - 52px topnav - 16px top pad - 16px bottom pad */
+    #view-file-preview { height: calc(100vh - 52px - 32px); }
+  }
+
+  /* ── Files table: fill remaining space, don't overflow bottom nav ── */
+  #files-table-wrap {
+    height: calc(100vh - 88px - 72px - 180px);
+    min-height: 200px;
+  }
+  @media(min-width:768px) {
+    #files-table-wrap { height: calc(100vh - 52px - 240px); min-height: 280px; }
+  }
+</style>
+<script>
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          "on-secondary":"#00363a","surface-tint":"#ecb2ff","on-surface-variant":"#d4c0d7",
+          "inverse-surface":"#e5e2e1","inverse-primary":"#9900cf","tertiary":"#94db00",
+          "surface-bright":"#393939","secondary-fixed-dim":"#00dbe9",
+          "surface-dim":"#131313","surface-container-high":"#2a2a2a","on-surface":"#e5e2e1",
+          "on-primary-fixed":"#320047","primary-container":"#bd00ff",
+          "secondary":"#d3fbff","outline":"#9d8ba0","primary-fixed":"#f8d8ff",
+          "surface":"#131313","primary-fixed-dim":"#ecb2ff","on-primary-container":"#ffffff",
+          "surface-variant":"#353534","on-background":"#e5e2e1",
+          "outline-variant":"#514255","on-tertiary-fixed":"#121f00",
+          "error-container":"#93000a","on-secondary-container":"#00686f",
+          "on-tertiary-container":"#fffeff","secondary-container":"#00eefc",
+          "surface-container-low":"#1c1b1b",
+          "background":"#131313","tertiary-container":"#568200","primary":"#ecb2ff",
+          "error":"#ffb4ab","surface-container-highest":"#353534","surface-container-lowest":"#0e0e0e",
+          "secondary-fixed":"#7df4ff","on-primary":"#520071","surface-container":"#201f1f"
+        },
+        borderRadius: { DEFAULT:"0.25rem", lg:"0.5rem", xl:"0.75rem", full:"9999px" },
+        fontFamily: {
+          "title-md":["Montserrat"],"body-sm":["Inter"],"headline-lg-mobile":["Montserrat"],
+          "body-lg":["Inter"],"label-bold":["Inter"],"headline-lg":["Montserrat"],"display-lg":["Montserrat"]
+        },
+      }
+    }
+  }
+</script>
+</head>
+<body class="bg-background text-on-background font-body-lg overflow-x-hidden">
+
+<!-- ═══════════ TRANSFER BANNER ═══════════ -->
+<div id="transfer-banner" class="transfer-banner fixed top-[88px] md:top-[52px] left-0 md:left-56 right-0 z-40 px-4 py-2"
+     style="background:rgba(14,14,14,0.95);backdrop-filter:blur(20px);border-bottom:1px solid rgba(0,238,252,0.2);display:none;">
+  <div class="max-w-7xl mx-auto flex items-center gap-4">
+    <span class="relative flex h-2 w-2 shrink-0">
+      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary-container opacity-75"></span>
+      <span class="relative inline-flex rounded-full h-2 w-2 bg-secondary-container"></span>
+    </span>
+    <span class="font-label-bold text-[10px] text-secondary-container uppercase tracking-widest shrink-0">Active Transfer</span>
+    <span class="font-label-bold text-[10px] text-on-surface-variant shrink-0 hidden md:block" id="transfer-label">Working…</span>
+    <div class="flex-1 bg-surface-container-highest h-1 rounded-full overflow-hidden">
+      <div class="transfer-bar-fill h-full rounded-full" id="transfer-bar" style="width:0%"></div>
+    </div>
+    <span class="font-label-bold text-[10px] text-on-surface shrink-0" id="transfer-pct">0%</span>
+    <span class="text-[10px] text-on-surface-variant shrink-0 hidden md:block" id="transfer-eta">calculating...</span>
+    <button onclick="cancelTransfer()" class="material-symbols-outlined text-on-surface-variant hover:text-error text-sm transition-colors shrink-0">close</button>
+  </div>
+</div>
+
+<!-- ═══════════ TOP NAV ═══════════ -->
+<header class="fixed top-0 w-full z-50 bg-surface/90 backdrop-blur-xl border-b border-outline-variant/50">
+  <div class="flex justify-between items-center px-4 h-[52px]">
+    <div class="flex items-center gap-3">
+      <span class="text-2xl font-extrabold text-primary tracking-tighter" style="font-family:Montserrat" id="topnav-brand">VoltDrive</span>
+      <!-- Real-time live indicator -->
+      <div id="live-indicator" title="Real-time sync active" class="hidden md:flex items-center gap-1.5 px-2 py-0.5 rounded-full transition-all duration-300"
+           style="background:rgba(80,220,100,0.1);border:1px solid rgba(80,220,100,0.25);">
+        <span class="relative flex h-1.5 w-1.5" id="live-dot">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style="background:#50dc64;" id="live-ping"></span>
+          <span class="relative inline-flex rounded-full h-1.5 w-1.5" style="background:#50dc64;" id="live-dot-inner"></span>
+        </span>
+        <span class="text-[9px] font-bold uppercase tracking-widest" style="color:#50dc64;" id="live-label">Live</span>
+      </div>
+    </div>
+    <div class="flex items-center gap-1">
+      <!-- Settings button -->
+      <div class="relative" id="settings-wrapper">
+        <button id="settings-btn" onclick="toggleSettingsDropdown()" class="material-symbols-outlined text-on-surface-variant hover:bg-surface-container-highest p-1 rounded transition-colors text-xl">settings</button>
+        <div id="settings-dropdown" class="hidden">
+          <div class="px-3 py-2 border-b border-outline-variant/20 mb-1">
+            <p class="text-[9px] font-bold uppercase tracking-widest text-outline">Device Actions</p>
+          </div>
+          <div class="settings-item cyan" onclick="closeSettingsAndRun(() => startAction('Refreshing file index...', 2200, 'Index updated ✓', () => loadFiles()))">
+            <span class="material-symbols-outlined text-[15px]">refresh</span> Refresh
+          </div>
+          <div class="settings-item purple" onclick="closeSettingsAndRun(() => startAction('Connecting over LAN...', 3500, 'LAN share active ✓'))">
+            <span class="material-symbols-outlined text-[15px]">lan</span> Share over LAN
+          </div>
+          <div class="settings-item green" onclick="closeSettingsAndRun(() => startAction('Simulating transfer...', 4000, 'Transfer complete ✓'))">
+            <span class="material-symbols-outlined text-[15px]">upload</span> Test Transfer
+          </div>
+          <div class="settings-divider"></div>
+          <div class="settings-item" onclick="closeSettingsAndRun(() => showView('home'))">
+            <span class="material-symbols-outlined text-[15px]">info</span> About Device
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="mobile-tab-bar" class="md:hidden">
+    <div id="mobile-no-tabs-hint" class="text-[10px] text-outline/40 italic shrink-0">No open tabs</div>
+  </div>
+</header>
+
+<!-- ═══════════ SIDEBAR ═══════════ -->
+<aside class="fixed left-0 top-0 h-full w-56 bg-surface-container-low border-r border-outline-variant/50 flex-col p-4 pt-[68px] hidden md:flex z-40">
+
+  <!-- Device info -->
+  <div class="mb-4 px-1 pb-4 border-b border-outline-variant/30">
+    <div class="flex items-center gap-2">
+      <div class="w-8 h-8 bg-primary-container/20 border border-primary/30 rounded flex items-center justify-center">
+        <span class="material-symbols-outlined text-primary text-sm" id="sidebar-dev-icon">usb</span>
+      </div>
+      <div>
+        <h3 class="font-bold text-sm text-primary leading-none" style="font-family:Montserrat" id="device-name">VoltDrive</h3>
+        <p class="text-on-surface-variant text-[10px] mt-0.5" id="sidebar-device-sub">Local Storage</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Static nav -->
+  <nav class="space-y-0.5 mb-3">
+    <a onclick="showView('home')" class="sidebar-nav-item flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 border border-transparent transition-all font-bold text-xs rounded cursor-pointer active-nav" id="nav-home">
+      <span class="material-symbols-outlined text-sm">info</span> About
+    </a>
+    <a onclick="showView('files')" class="sidebar-nav-item flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 border border-transparent transition-all font-bold text-xs rounded cursor-pointer" id="nav-files">
+      <span class="material-symbols-outlined text-sm">folder_open</span> All Files
+    </a>
+    <a onclick="showView('home'); highlightNav('nav-home'); setTimeout(()=>{ const el=document.getElementById('recent-files-strip'); if(el)el.scrollIntoView({behavior:'smooth',block:'start'}); },80);" class="sidebar-nav-item flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 border border-transparent transition-all font-bold text-xs rounded cursor-pointer" id="nav-recent">
+      <span class="material-symbols-outlined text-sm">schedule</span>
+      <span class="flex-1">Recent</span>
+      <span id="recent-count-badge" class="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style="background:rgba(236,178,255,0.12);color:#ecb2ff;border:1px solid rgba(236,178,255,0.25)">0</span>
+    </a>
+  </nav>
+
+  <!-- Open Tabs label -->
+  <div class="flex items-center justify-between px-1 mb-1">
+    <span class="text-[9px] font-bold uppercase tracking-widest text-outline">Open Tabs</span>
+    <span class="text-[9px] text-outline" id="tab-count">0</span>
+  </div>
+
+  <!-- Tabs list -->
+  <div id="sidebar-tabs-container" class="space-y-0.5 mb-3">
+    <div id="no-tabs-hint" class="text-[10px] text-outline px-2 py-1 italic">Open a folder to browse</div>
+  </div>
+
+  <!-- Bottom actions -->
+  <div class="mt-auto pt-4 border-t border-outline-variant/30 space-y-0.5">
+    <!-- Notifications button -->
+    <a onclick="openNotifPanel()" class="sidebar-nav-item flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:text-secondary-container hover:bg-secondary-container/5 border border-transparent transition-all font-bold text-xs rounded cursor-pointer relative" id="nav-notif">
+      <span class="material-symbols-outlined text-sm">notifications</span>
+      <span class="flex-1">Activity Log</span>
+      <span id="notif-sidebar-badge" class="hidden text-[9px] font-bold px-1.5 py-0.5 rounded-full" style="background:rgba(0,238,252,0.15);color:#00eefc;border:1px solid rgba(0,238,252,0.3)"></span>
+    </a>
+    <!-- Trash button -->
+    <a onclick="showView('trash'); loadTrash();" class="sidebar-nav-item flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:text-error hover:bg-error/5 border border-transparent transition-all font-bold text-xs rounded cursor-pointer" id="nav-trash">
+      <span class="material-symbols-outlined text-sm">delete</span>
+      <span class="flex-1">Trash</span>
+      <span id="trash-count-badge" class="hidden text-[9px] font-bold px-1.5 py-0.5 rounded-full" style="background:rgba(255,180,171,0.15);color:#ffb4ab;border:1px solid rgba(255,180,171,0.3)"></span>
+    </a>
+    <button onclick="ejectDevice()" class="w-full mt-2 py-2 bg-error-container/10 border border-error/40 text-error rounded font-bold text-[10px] hover:bg-error-container hover:text-on-error-container transition-all flex items-center justify-center gap-2">
+      <span class="material-symbols-outlined text-sm">eject</span> EJECT DEVICE
+    </button>
+  </div>
+</aside>
+
+<!-- ═══════════ NOTIFICATIONS PANEL ═══════════ -->
+<div id="notif-panel">
+  <!-- Header -->
+  <div class="flex items-center justify-between px-4 py-3 border-b border-outline-variant/20 shrink-0" style="padding-top:60px;">
+    <div class="flex items-center gap-2">
+      <span class="material-symbols-outlined text-secondary-container text-base">notifications</span>
+      <h3 class="font-bold text-sm text-on-surface" style="font-family:Montserrat">Activity Log</h3>
+    </div>
+    <div class="flex items-center gap-1">
+      <button onclick="clearLogs()" title="Clear all logs" class="text-[10px] font-bold text-outline hover:text-error px-2 py-1 rounded border border-transparent hover:border-error/30 transition-all flex items-center gap-1">
+        <span class="material-symbols-outlined text-[13px]">delete_sweep</span> CLEAR
+      </button>
+      <button onclick="closeNotifPanel()" class="material-symbols-outlined text-on-surface-variant hover:text-on-surface text-base p-1 rounded transition-colors">close</button>
+    </div>
+  </div>
+
+  <!-- Capacity warning (shown when >80%) -->
+  <div id="notif-capacity-warn" class="hidden mx-3 mt-3 shrink-0" style="background:rgba(255,180,171,0.08);border:1px solid rgba(255,180,171,0.25);border-radius:6px;padding:10px 12px;">
+    <div class="flex items-center gap-2 mb-1">
+      <span class="material-symbols-outlined text-error text-[14px]">warning</span>
+      <span class="text-[11px] font-bold text-error">Capacity Warning</span>
+    </div>
+    <p class="text-[10px] text-on-surface-variant" id="notif-capacity-text">Drive is running at over 80% capacity. Consider cleaning up files to free space.</p>
+  </div>
+
+  <!-- Log info -->
+  <div class="px-4 py-2 border-b border-outline-variant/10 shrink-0">
+    <p class="text-[9px] text-outline">Logs track file name, size, and action time. Search & Trash cannot access this log.</p>
+  </div>
+
+  <!-- Log list -->
+  <div id="notif-list" class="flex-1 overflow-y-auto">
+    <div id="notif-empty" class="flex flex-col items-center justify-center py-16 gap-3">
+      <span class="material-symbols-outlined text-3xl text-outline/30">notifications_none</span>
+      <p class="text-[11px] text-outline italic">No activity yet</p>
+    </div>
+  </div>
+</div>
+<div id="notif-overlay" onclick="closeNotifPanel()" class="hidden fixed inset-0 z-[299]" style="background:rgba(0,0,0,0.4);backdrop-filter:blur(2px);"></div>
+
+<!-- ═══════════ MAIN CONTENT ═══════════ -->
+<main id="main-content" class="min-h-screen" style="box-sizing:border-box;">
+  <div class="max-w-7xl mx-auto space-y-4">
+
+    <!-- ── VIEW: HOME / ABOUT ── -->
+    <div id="view-home">
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+        <!-- Device Vitality -->
+        <div class="md:col-span-5 space-y-4">
+          <div class="glass-card rounded border border-outline-variant/50 p-4">
+            <!-- Header row with live indicator -->
+            <div class="flex items-center justify-between border-b border-outline-variant/30 pb-2 mb-4">
+              <h3 class="font-bold text-[10px] text-secondary-container uppercase tracking-widest">Device Vitality</h3>
+              <span class="flex items-center gap-1.5 text-[9px] font-bold" style="color:#50dc64;">
+                <span class="relative flex h-1.5 w-1.5">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style="background:#50dc64;"></span>
+                  <span class="relative inline-flex rounded-full h-1.5 w-1.5" style="background:#50dc64;"></span>
+                </span>
+                LIVE
+              </span>
+            </div>
+
+            <!-- SPEEDOMETER GAUGE -->
+            <div class="flex-1 flex items-center justify-center mb-2" id="gauge-wrap">
+              <div class="relative gauge-glow-cyan w-full" id="gauge-container" style="max-width:360px;">
+                <svg id="gauge-svg" viewBox="20 65 360 230" width="100%" height="auto" style="display:block;overflow:visible;">
+                  <defs>
+                    <!-- Zone solid colors -->
+                    <linearGradient id="arc-grad-green"  x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stop-color="#22c55e"/><stop offset="100%" stop-color="#4ade80"/>
+                    </linearGradient>
+                    <linearGradient id="arc-grad-yellow" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stop-color="#facc15"/><stop offset="100%" stop-color="#fbbf24"/>
+                    </linearGradient>
+                    <linearGradient id="arc-grad-red"    x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stop-color="#f87171"/><stop offset="100%" stop-color="#ef4444"/>
+                    </linearGradient>
+                    <filter id="needle-glow" x="-80%" y="-80%" width="260%" height="260%">
+                      <feGaussianBlur stdDeviation="3" result="blur"/>
+                      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>
+                    <filter id="arc-glow" x="-20%" y="-20%" width="140%" height="140%">
+                      <feGaussianBlur stdDeviation="3" result="blur"/>
+                      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>
+                    <filter id="label-glow" x="-60%" y="-60%" width="220%" height="220%">
+                      <feGaussianBlur stdDeviation="2.5" result="b1"/>
+                      <feGaussianBlur stdDeviation="5" result="b2"/>
+                      <feMerge><feMergeNode in="b2"/><feMergeNode in="b1"/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>
+                    <radialGradient id="inner-face-grad" cx="50%" cy="50%" r="50%">
+                      <stop offset="0%" stop-color="#1e1e1e"/><stop offset="100%" stop-color="#111111"/>
+                    </radialGradient>
+                    <mask id="needle-mask">
+                      <rect x="0" y="0" width="400" height="400" fill="white"/>
+                      <circle cx="200" cy="200" r="52" fill="black"/>
+                    </mask>
+                  </defs>
+                  <!-- Track (full arc background) -->
+                  <path id="gauge-track" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="18" stroke-linecap="butt"/>
+                  <!-- Zone arc segments: green 0-60%, yellow 60-85%, red 85-100% -->
+                  <!-- These are track-sized background zones drawn first, then clipped by the needle fill -->
+                  <path id="gauge-zone-green"  fill="none" stroke="url(#arc-grad-green)"  stroke-width="10" stroke-linecap="butt"  opacity="0.18"/>
+                  <path id="gauge-zone-yellow" fill="none" stroke="url(#arc-grad-yellow)" stroke-width="10" stroke-linecap="butt"  opacity="0.18"/>
+                  <path id="gauge-zone-red"    fill="none" stroke="url(#arc-grad-red)"    stroke-width="10" stroke-linecap="butt"  opacity="0.18"/>
+                  <!-- Filled arc — colored by zone of current usage -->
+                  <path id="gauge-arc-fill-green"  fill="none" stroke="url(#arc-grad-green)"  stroke-width="8" stroke-linecap="butt"  filter="url(#arc-glow)"/>
+                  <path id="gauge-arc-fill-yellow" fill="none" stroke="url(#arc-grad-yellow)" stroke-width="8" stroke-linecap="butt"  filter="url(#arc-glow)"/>
+                  <path id="gauge-arc-fill-red"    fill="none" stroke="url(#arc-grad-red)"    stroke-width="8" stroke-linecap="butt"  filter="url(#arc-glow)"/>
+                  <!-- Remove old single fill arc placeholder -->
+                  <path id="gauge-arc-fill" fill="none" stroke="none" stroke-width="0"/>
+                  <!-- Dynamic ticks -->
+                  <g id="gauge-ticks"></g>
+                  <!-- Needle — slim tapered, masked behind inner face -->
+                  <g id="gauge-needle-g" transform="rotate(-135,200,200)" mask="url(#needle-mask)">
+                    <polygon id="gauge-needle-poly"
+                      points="198.5,196 201.5,196 200.6,76 199.4,76"
+                      fill="white" opacity="0.95" filter="url(#needle-glow)"/>
+                  </g>
+                  <!-- Inner face — smaller to give more arc/tick space -->
+                  <circle cx="200" cy="200" r="52" fill="url(#inner-face-grad)" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+                  <circle cx="200" cy="200" r="47" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="2"/>
+                  <!-- Center label -->
+                  <text id="gauge-label-used" x="200" y="207" text-anchor="middle"
+                    font-family="Montserrat,sans-serif" font-weight="800" font-size="20" fill="#e5e2e1">—</text>
+                  <text id="gauge-label-unit"  x="-999" y="-999" font-size="1" fill="none"></text>
+                  <text id="gauge-label-total" x="-999" y="-999" font-size="1" fill="none"></text>
+                  <!-- Pivot ring -->
+                  <circle id="gauge-pivot" cx="200" cy="200" r="6" fill="#181818" stroke="#4ade80" stroke-width="1.5" style="display: none;"/>
+                </svg>
+              </div>
+            </div>
+
+            <!-- Used / Free labels -->
+            <div class="flex gap-6 justify-center mb-3">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-sm shrink-0" style="background:linear-gradient(90deg,#00eefc,#bd00ff)"></span>
+                <span class="text-[10px] font-bold text-on-surface-variant">Used · <span id="gauge-used-label">—</span></span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-sm shrink-0" style="background:rgba(148,219,0,0.7)"></span>
+                <span class="text-[10px] font-bold text-on-surface-variant">Free · <span id="gauge-free-label">—</span></span>
+              </div>
+            </div>
+
+            <!-- Stats: Files Indexed only -->
+            <div class="border-t border-outline-variant/20 pt-3 flex items-center justify-between">
+              <p class="text-[9px] uppercase tracking-widest font-bold" style="color:#514255;">Files Indexed</p>
+              <p class="text-xs font-bold text-on-surface flex items-center gap-1">
+                <span id="vitality-file-count">—</span>
+                <span id="file-count-pulse" class="hidden relative flex h-1 w-1">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style="background:#00eefc;"></span>
+                  <span class="relative inline-flex rounded-full h-1 w-1" style="background:#00eefc;"></span>
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Drop Zone -->
+        <div class="md:col-span-7">
+          <div class="h-full min-h-[220px] md:min-h-[340px] glass-card rounded border-2 border-dashed border-primary/40 hover:border-primary/80 hover:bg-primary/5 transition-all flex flex-col items-center justify-center p-4 md:p-6 group cursor-pointer relative overflow-hidden"
+               id="drop-zone" ondragover="event.preventDefault()" ondrop="handleDrop(event)">
+            <div class="absolute inset-0 bg-gradient-to-b from-transparent to-primary/5 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div id="dz-field" class="absolute inset-0 pointer-events-none flex items-center justify-center" style="display:none!important;">
+              <svg id="dz-svg" width="480" height="480" viewBox="0 0 400 400" style="position:absolute;overflow:visible;">
+                <circle class="field-ring" cx="200" cy="200" r="46"  fill="none" stroke="url(#fg1)" stroke-width="2"    style="--d:0s;transform-origin:200px 200px;"/>
+                <circle class="field-ring" cx="200" cy="200" r="76"  fill="none" stroke="url(#fg1)" stroke-width="1.7"  style="--d:0.18s;transform-origin:200px 200px;"/>
+                <circle class="field-ring" cx="200" cy="200" r="112" fill="none" stroke="url(#fg1)" stroke-width="1.4"  style="--d:0.36s;transform-origin:200px 200px;"/>
+                <circle class="field-ring" cx="200" cy="200" r="154" fill="none" stroke="url(#fg1)" stroke-width="1.1"  style="--d:0.54s;transform-origin:200px 200px;"/>
+                <circle class="field-ring" cx="200" cy="200" r="204" fill="none" stroke="url(#fg1)" stroke-width="0.85" style="--d:0.72s;transform-origin:200px 200px;"/>
+                <circle class="field-ring" cx="200" cy="200" r="262" fill="none" stroke="url(#fg1)" stroke-width="0.6"  style="--d:0.90s;transform-origin:200px 200px;"/>
+                <circle class="field-ring" cx="200" cy="200" r="330" fill="none" stroke="url(#fg1)" stroke-width="0.4"  style="--d:1.08s;transform-origin:200px 200px;"/>
+                <path class="field-arc" d="M200,154 C165,134 130,134 106,154" fill="none" stroke="url(#fg2)" stroke-width="1.4" style="--d:0.1s"/>
+                <path class="field-arc" d="M200,246 C165,266 130,266 106,246" fill="none" stroke="url(#fg2)" stroke-width="1.4" style="--d:0.1s"/>
+                <path class="field-arc" d="M200,154 C235,134 270,134 294,154" fill="none" stroke="url(#fg2)" stroke-width="1.4" style="--d:0.1s"/>
+                <path class="field-arc" d="M200,246 C235,266 270,266 294,246" fill="none" stroke="url(#fg2)" stroke-width="1.4" style="--d:0.1s"/>
+                <defs>
+                  <radialGradient id="fg1" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="#00eefc" stop-opacity="1"/>
+                    <stop offset="50%" stop-color="#bd00ff" stop-opacity="0.7"/>
+                    <stop offset="100%" stop-color="#bd00ff" stop-opacity="0"/>
+                  </radialGradient>
+                  <linearGradient id="fg2" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#00eefc" stop-opacity="0.8"/>
+                    <stop offset="50%" stop-color="#bd00ff" stop-opacity="0.7"/>
+                    <stop offset="100%" stop-color="#00eefc" stop-opacity="0.8"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+            <div id="dz-icon-wrap" class="w-16 h-16 rounded-full bg-surface-container-highest border border-outline-variant/50 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:bg-primary-container/20 group-hover:border-primary/50 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] relative z-10">
+              <span class="material-symbols-outlined text-4xl text-primary" id="dz-icon">cloud_upload</span>
+              <svg id="dz-tick-svg" viewBox="0 0 64 64" width="42" height="42" style="position:absolute;display:none;" fill="none">
+                <circle cx="32" cy="32" r="28" stroke="#50dc64" stroke-width="3" style="transform-origin:32px 32px;animation:successCircleIn 0.45s cubic-bezier(0.34,1.56,0.64,1) forwards;"/>
+                <path d="M18 33 L28 43 L46 22" stroke="#50dc64" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" style="stroke-dasharray:60;stroke-dashoffset:60;animation:successTickDraw 0.5s 0.25s cubic-bezier(0.4,0,0.2,1) forwards;"/>
+              </svg>
+            </div>
+            <h2 class="font-bold text-base text-on-surface mb-1 relative z-10" style="font-family:Montserrat" id="dz-title">Drag &amp; Drop Files Here</h2>
+            <p class="text-on-surface-variant text-xs text-center max-w-sm relative z-10" id="dz-subtitle">Upload files instantly to VoltDrive.</p>
+            <input type="file" id="file-input" multiple style="display:none" onchange="handleFileInputChange(this)"/>
+            <button onclick="document.getElementById('file-input').click()" id="dz-btn" class="mt-4 px-4 py-1.5 bg-surface-container-highest border border-outline-variant/50 text-on-surface rounded font-bold text-[10px] hover:border-primary/50 transition-all relative z-10">Select Files</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- DEVICE INFO -->
+      <div class="pt-2">
+        <h3 class="font-bold text-[10px] text-on-surface-variant uppercase tracking-widest mb-3 border-b border-outline-variant/30 pb-1 flex items-center gap-2">
+          <span class="material-symbols-outlined text-[13px]">memory</span> Device Info
+        </h3>
+        <div class="glass-card rounded border border-outline-variant/50 p-4">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style="background:rgba(236,178,255,0.08);border:1px solid rgba(236,178,255,0.25);">
+              <span class="material-symbols-outlined text-2xl text-primary">storage</span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <h4 class="font-bold text-sm text-on-surface leading-none" style="font-family:Montserrat" id="about-dev-label">VoltDrive PenServe 2</h4>
+                <span class="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold shrink-0" style="background:rgba(80,220,100,0.12);color:#50dc64;border:1px solid rgba(80,220,100,0.3);">
+                  <span class="relative flex h-1.5 w-1.5">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style="background:#50dc64;"></span>
+                    <span class="relative inline-flex rounded-full h-1.5 w-1.5" style="background:#50dc64;"></span>
+                  </span>
+                  Running
+                </span>
+              </div>
+              <p class="text-[10px] text-on-surface-variant mt-1">Local file server on your pendrive. Files stored in <code class="text-secondary-container text-[9px]">penserve2/files/</code></p>
+              <div class="flex gap-3 mt-2">
+                <div id="lan-ips" class="text-[10px] text-outline"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- RECENT FILES -->
+      <div class="pt-2">
+        <h3 class="font-bold text-[10px] text-on-surface-variant uppercase tracking-widest mb-3 border-b border-outline-variant/30 pb-1 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-[13px]">schedule</span> Recent Files
+          </div>
+          <button onclick="clearRecent()" class="text-[9px] font-bold text-outline hover:text-error border border-transparent hover:border-error/30 px-2 py-0.5 rounded transition-all flex items-center gap-1 normal-case tracking-normal">
+            <span class="material-symbols-outlined text-[11px]">delete_sweep</span> Clear
+          </button>
+        </h3>
+        <div class="flex gap-3 overflow-x-auto pb-3 snap-x no-scrollbar -mx-3 px-3 md:mx-0 md:px-0" id="recent-files-strip">
+          <!-- Rendered by renderRecentFiles() -->
+        </div>
+      </div>
+    </div><!-- /view-home -->
+
+    <!-- ── VIEW: ALL FILES ── -->
+    <div id="view-files" class="hidden flex flex-col gap-4">
+      <div class="flex items-center gap-2 mb-4">
+        <span class="material-symbols-outlined text-primary text-sm">folder_open</span>
+        <h2 class="font-bold text-sm text-on-surface" style="font-family:Montserrat">All Files — Root</h2>
+      </div>
+
+      <!-- Capacity warning bar (shown when >80%) -->
+      <div id="files-capacity-warn" class="hidden capacity-warn-bar">
+        <span class="material-symbols-outlined text-error text-[16px]">warning</span>
+        <div class="flex-1">
+          <p class="text-[11px] font-bold text-error">Drive nearing capacity</p>
+          <p class="text-[10px] text-on-surface-variant" id="files-capacity-text">Usage is above 80%. Free up space soon.</p>
+        </div>
+        <button onclick="showView('trash');loadTrash();" class="text-[10px] font-bold text-error border border-error/30 px-2 py-1 rounded hover:bg-error/10 transition-all">Go to Trash</button>
+      </div>
+
+      <!-- New Folder button + Search + Filter -->
+      <div class="relative mb-4">
+        <div class="flex gap-2 items-center flex-wrap">
+          <button onclick="promptNewFolder()" class="flex items-center gap-1.5 px-2.5 py-2 bg-surface-container-highest border border-outline-variant/50 rounded font-bold text-[10px] text-on-surface-variant hover:text-tertiary hover:border-tertiary/50 transition-all shrink-0">
+            <span class="material-symbols-outlined text-sm">create_new_folder</span>
+            <span class="hidden sm:inline">New Folder</span>
+          </button>
+          <div class="flex-1 flex items-center bg-surface-container-highest rounded border border-outline-variant/50 px-3 py-2 gap-2 focus-within:border-primary/60 transition-colors">
+            <span class="material-symbols-outlined text-sm text-on-surface-variant shrink-0">search</span>
+            <input id="files-search-input" class="bg-transparent border-none focus:ring-0 text-xs flex-1 text-on-surface p-0 outline-none" placeholder="Search by name (root only)…" type="text" oninput="handleSearch(this.value)" autocomplete="off"/>
+            <button id="search-clear" onclick="clearSearch()" class="material-symbols-outlined text-[14px] text-outline hover:text-on-surface transition-colors hidden">close</button>
+          </div>
+          <div class="relative">
+            <button onclick="toggleFilter()" id="filter-btn" class="flex items-center gap-1.5 px-3 py-2 bg-surface-container-highest border border-outline-variant/50 rounded font-bold text-[10px] text-on-surface-variant hover:text-on-surface hover:border-outline-variant transition-all">
+              <span class="material-symbols-outlined text-sm">filter_list</span>
+              <span id="filter-label">ALL TYPES</span>
+              <span class="material-symbols-outlined text-[13px]">expand_more</span>
+            </button>
+            <div id="filter-dropdown" class="hidden absolute right-0 top-full mt-1 z-20 bg-surface-container-high border border-outline-variant/50 rounded shadow-xl min-w-[140px] py-1"></div>
+          </div>
+        </div>
+        <!-- Search dropdown -->
+        <div id="search-dropdown" class="hidden absolute left-0 right-0 top-full mt-1 z-30 glass-card border border-outline-variant/50 rounded shadow-xl max-h-64 overflow-y-auto">
+          <div id="search-results-list"></div>
+        </div>
+      </div>
+
+      <!-- Files table -->
+      <div id="files-table-wrap" class="glass-card rounded border border-outline-variant/50 flex flex-col overflow-hidden">
+        <!-- Sticky header -->
+        <div class="flex justify-between items-center px-4 py-2 border-b border-outline-variant/30 bg-surface/50 shrink-0 rounded-t">
+          <h3 class="font-bold text-[10px] text-on-surface-variant uppercase tracking-widest" id="files-table-label">Drive Files</h3>
+          <span class="text-[10px] text-outline" id="files-table-count"></span>
+        </div>
+        <!-- Scrollable body -->
+        <div id="files-table-body-2" class="flex-1 overflow-y-auto">
+          <div class="flex items-center justify-center py-12 gap-2 text-outline">
+            <span class="material-symbols-outlined spin-icon text-base">refresh</span>
+            <span class="text-xs">Loading files…</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── VIEW: FOLDER TAB (tree browser) ── -->
+    <div id="view-folder" class="hidden">
+      <div class="flex items-center gap-2 mb-4">
+        <button onclick="showView('files');highlightNav('nav-files');" class="material-symbols-outlined text-on-surface-variant hover:text-on-surface text-base">arrow_back</button>
+        <span class="material-symbols-outlined text-primary text-sm">folder_open</span>
+        <h2 class="font-bold text-sm text-on-surface" id="folder-view-title" style="font-family:Montserrat">Folder</h2>
+      </div>
+      <div class="glass-card rounded border border-outline-variant/50 p-4 min-h-[400px]">
+        <div id="tree-root" class="space-y-0.5 text-xs text-on-surface"></div>
+      </div>
+    </div>
+
+    <!-- ── VIEW: FILE PREVIEW (replaces old view-file) ── -->
+    <div id="view-file-preview" class="hidden">
+      <!-- Zone 1: Header -->
+      <div class="fp-header" id="fp-header">
+        <button id="fp-back-btn" class="material-symbols-outlined text-on-surface-variant hover:text-on-surface text-base transition-colors flex-shrink-0">arrow_back</button>
+        <span class="material-symbols-outlined text-sm flex-shrink-0" id="fp-icon" style="color:#9d8ba0">insert_drive_file</span>
+        <span class="fp-header-title" id="fp-title">—</span>
+        <button id="fp-tab-close" class="material-symbols-outlined text-[14px] text-outline hover:text-error transition-colors flex-shrink-0" title="Close tab">close</button>
+      </div>
+
+      <!-- Zone 2: Content -->
+      <div class="fp-content" id="fp-content">
+        <div class="fp-content-inner fp-center" id="fp-content-inner">
+          <div class="fp-placeholder">
+            <div class="fp-placeholder-icon-wrap">
+              <span class="material-symbols-outlined text-4xl text-outline/30 spin-icon">refresh</span>
+            </div>
+            <p class="text-outline text-xs">Loading preview…</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Zone 3: Info bar -->
+      <div class="fp-infobar" id="fp-infobar">
+        <div class="fp-infobar-meta" id="fp-meta">
+          <!-- injected by JS -->
+        </div>
+        <div class="fp-infobar-actions" id="fp-actions">
+          <!-- injected by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ── OLD view-file kept hidden for fallback (no content) ── -->
+    <div id="view-file" class="hidden"></div>
+
+    <!-- ── VIEW: TRASH ── -->
+    <div id="view-trash" class="hidden">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded flex items-center justify-center" style="background:rgba(255,180,171,0.1);border:1px solid rgba(255,180,171,0.25);">
+            <span class="material-symbols-outlined text-error text-base">delete</span>
+          </div>
+          <div>
+            <h2 class="font-bold text-sm text-on-surface" style="font-family:Montserrat">Trash</h2>
+            <p class="text-[10px] text-outline mt-0.5" id="trash-subtitle">Items here won't be deleted until you choose</p>
+          </div>
+        </div>
+        <button onclick="emptyTrash()" id="empty-trash-btn" class="hidden px-3 py-1.5 border border-error/40 text-error rounded font-bold text-[10px] hover:bg-error/10 transition-all flex items-center gap-1.5" style="background:rgba(255,180,171,0.05);">
+          <span class="material-symbols-outlined text-[13px]">delete_forever</span> EMPTY TRASH
+        </button>
+      </div>
+
+      <div id="trash-stats-bar" class="hidden mb-4 glass-card rounded border border-error/15 px-4 py-3 flex items-center gap-6">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-error/60 text-sm">info</span>
+          <span class="text-[10px] text-on-surface-variant">Items remain here until manually deleted</span>
+        </div>
+        <div class="ml-auto flex items-center gap-5">
+          <div class="text-center">
+            <p class="text-[18px] font-bold text-error/80" style="font-family:Montserrat;line-height:1" id="trash-stat-count">0</p>
+            <p class="text-[9px] text-outline uppercase tracking-wider mt-0.5">Items</p>
+          </div>
+          <div class="w-px h-8 bg-outline-variant/30"></div>
+          <div class="text-center">
+            <p class="text-[18px] font-bold text-on-surface-variant" style="font-family:Montserrat;line-height:1" id="trash-stat-size">—</p>
+            <p class="text-[9px] text-outline uppercase tracking-wider mt-0.5">Total Size</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-card rounded border border-error/15 overflow-hidden" id="trash-container">
+        <div id="trash-empty-hint" class="flex flex-col items-center justify-center py-20 gap-4">
+          <div class="w-16 h-16 rounded-full flex items-center justify-center" style="background:rgba(255,180,171,0.06);border:1px dashed rgba(255,180,171,0.2);">
+            <span class="material-symbols-outlined text-3xl" style="color:rgba(255,180,171,0.3);">delete</span>
+          </div>
+          <div class="text-center">
+            <p class="text-outline text-xs font-bold">Trash is empty</p>
+            <p class="text-outline/50 text-[10px] mt-1">Deleted files will appear here</p>
+          </div>
+        </div>
+        <div id="trash-table-header" class="hidden">
+          <div class="border-b border-outline-variant/20 px-4 py-2 bg-surface-container-lowest flex items-center gap-3">
+            <span class="text-[9px] font-bold uppercase tracking-widest text-outline w-5"></span>
+            <span class="text-[9px] font-bold uppercase tracking-widest text-outline flex-1">Name</span>
+            <span class="text-[9px] font-bold uppercase tracking-widest text-outline w-20 hidden sm:block">Size</span>
+            <span class="text-[9px] font-bold uppercase tracking-widest text-outline w-36 hidden md:block">Deleted</span>
+            <span class="text-[9px] font-bold uppercase tracking-widest text-outline w-28 text-right">Actions</span>
+          </div>
+        </div>
+        <div id="trash-body"></div>
+      </div>
+    </div>
+
+  </div><!-- /max-w -->
+</main>
+
+<!-- Mobile bottom nav -->
+<nav id="mob-nav" class="md:hidden fixed bottom-0 w-full border-t border-outline-variant/50 justify-around items-center py-2 z-50" style="background:rgba(19,19,19,0.97);backdrop-filter:blur(16px);touch-action:manipulation;">
+  <button onclick="showView('home')" class="mob-nav-btn flex flex-col items-center gap-1 text-primary">
+    <span class="material-symbols-outlined text-lg">info</span>
+    <span class="text-[9px] font-bold">About</span>
+  </button>
+  <button onclick="showView('files');loadFiles();" class="mob-nav-btn flex flex-col items-center gap-1 text-on-surface-variant">
+    <span class="material-symbols-outlined text-lg">folder</span>
+    <span class="text-[9px] font-bold">Files</span>
+  </button>
+  <button onclick="showView('trash');loadTrash();" class="mob-nav-btn flex flex-col items-center gap-1 text-on-surface-variant relative">
+    <span class="material-symbols-outlined text-lg">delete</span>
+    <span class="text-[9px] font-bold">Trash</span>
+    <span id="trash-mobile-badge" class="hidden absolute -top-0.5 right-1 w-3.5 h-3.5 rounded-full text-[7px] font-bold items-center justify-center" style="background:#ffb4ab;color:#690005;"></span>
+  </button>
+  <button onclick="openNotifPanel()" class="mob-nav-btn flex flex-col items-center gap-1 text-on-surface-variant">
+    <span class="material-symbols-outlined text-lg">notifications</span>
+    <span class="text-[9px] font-bold">Logs</span>
+  </button>
+</nav>
+
+<!-- Image Lightbox -->
+<div id="fp-lightbox" onclick="closeLightbox(event)">
+  <button id="fp-lightbox-close" onclick="closeLightbox()" aria-label="Close">
+    <span class="material-symbols-outlined text-base">close</span>
+  </button>
+  <img id="fp-lightbox-img" src="" alt="Full size preview"/>
+</div>
+
+<script>
+// ═══════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════
+function fileIcon(type, name) {
+  if (type === 'folder') return 'folder';
+  const ext = (name || '').split('.').pop().toLowerCase();
+  const extMap = {
+    mp4:'movie', mov:'movie', avi:'movie', mkv:'movie', webm:'movie',
+    mp3:'audio_file', wav:'audio_file', flac:'audio_file', aac:'audio_file',
+    jpg:'image', jpeg:'image', png:'image', gif:'image', webp:'image', svg:'image', heic:'image',
+    pdf:'picture_as_pdf', doc:'description', docx:'description', txt:'description', md:'description', odt:'description',
+    zip:'folder_zip', rar:'folder_zip', tar:'folder_zip', gz:'folder_zip', '7z':'folder_zip',
+    js:'code', ts:'code', py:'code', html:'code', css:'code', json:'code', xml:'code', sh:'code',
+    exe:'terminal', dmg:'terminal', bin:'terminal', msi:'terminal',
+    xlsx:'table_chart', csv:'table_chart', xls:'table_chart',
+  };
+  return extMap[ext] || 'insert_drive_file';
+}
+function fileIconColor(type, name) {
+  if (type === 'folder') return 'text-on-surface-variant';
+  const ext = (name || '').split('.').pop().toLowerCase();
+  const m = {
+    mp4:'text-primary', mov:'text-primary', avi:'text-primary', mkv:'text-primary',
+    mp3:'text-secondary-container', wav:'text-secondary-container',
+    jpg:'text-secondary-container', jpeg:'text-secondary-container', png:'text-secondary-container', gif:'text-secondary-container', webp:'text-secondary-container',
+    pdf:'text-error', doc:'text-primary', docx:'text-primary', txt:'text-primary', md:'text-primary',
+    zip:'text-tertiary', rar:'text-tertiary', tar:'text-tertiary', gz:'text-tertiary',
+    js:'text-tertiary', ts:'text-tertiary', py:'text-tertiary', json:'text-tertiary', sh:'text-tertiary',
+    exe:'text-outline', bin:'text-outline',
+    xlsx:'text-tertiary', csv:'text-tertiary',
+  };
+  return m[ext] || 'text-on-surface-variant';
+}
+function fileTypeName(type, name) {
+  if (type === 'folder') return 'Folder';
+  const ext = (name || '').split('.').pop().toLowerCase();
+  const m = {
+    mp4:'Video', mov:'Video', avi:'Video', mkv:'Video',
+    mp3:'Audio', wav:'Audio', flac:'Audio',
+    jpg:'Image', jpeg:'Image', png:'Image', gif:'Image', webp:'Image', svg:'Image',
+    pdf:'PDF', doc:'Document', docx:'Document', txt:'Text', md:'Markdown',
+    zip:'Archive', rar:'Archive', tar:'Archive', gz:'Archive',
+    js:'JavaScript', ts:'TypeScript', py:'Python', html:'HTML', css:'CSS', json:'JSON', sh:'Shell Script',
+    exe:'Executable', dmg:'Disk Image', bin:'Binary',
+    xlsx:'Spreadsheet', csv:'CSV',
+  };
+  return m[ext] || 'File';
+}
+
+function fmtDate(isoStr) {
+  if (!isoStr) return '—';
+  const d = new Date(isoStr);
+  return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})
+    + ' · ' + d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+}
+
+// ═══════════════════════════════════
+// STATE
+// ═══════════════════════════════════
+let driveFiles = [];      // raw from /api/files
+let activeFilter = 'all';
+let favorites = new Set();
+let openTabs = [];
+let recentItems = [];     // top 10 recently modified files/folders
+let activeTabIdx = -1;
+let fileViewerSource = 'files';
+let transferInterval = null, transferPct = 0, bannerVisible = false;
+let dzUploadTimer = null;
+let notifPanelOpen = false;
+let logEntries = [];
+let trashItems = [];
+let serverInfo = {};
+let currentFolderPath = '';  // for folder tab browsing
+
+// ═══════════════════════════════════
+// VIEWS
+// ═══════════════════════════════════
+const views = ['home','files','folder','file-preview','file','trash'];
+function showView(id) {
+  views.forEach(v => {
+    const el = document.getElementById('view-' + v);
+    if (el) el.classList.toggle('hidden', v !== id);
+  });
+  // file-preview fills viewport — suppress main scroll and side padding
+  const main = document.getElementById('main-content');
+  if (main) {
+    if (id === 'file-preview') {
+      main.style.overflowY    = 'hidden';
+      main.style.paddingLeft  = '0';
+      main.style.paddingRight = '0';
+    } else {
+      main.style.overflowY    = '';
+      main.style.paddingLeft  = '';
+      main.style.paddingRight = '';
+    }
+  }
+  document.querySelectorAll('.sidebar-nav-item').forEach(a => {
+    a.classList.remove('bg-primary-container/20','text-primary','border-primary/50','translate-x-1');
+    a.classList.add('text-on-surface-variant','border-transparent');
+  });
+  if (id === 'home')  highlightNav('nav-home');
+  if (id === 'files') { highlightNav('nav-files'); loadFiles(); }
+  if (id === 'trash') highlightNav('nav-trash');
+}
+function highlightNav(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add('bg-primary-container/20','text-primary','border-primary/50','translate-x-1');
+  el.classList.remove('text-on-surface-variant','border-transparent');
+}
+
+// ═══════════════════════════════════
+// LOAD FILES FROM SERVER
+// ═══════════════════════════════════
+async function loadFiles(folderPath) {
+  const path = folderPath || '';
+  try {
+    const res = await fetch('/api/files?path=' + encodeURIComponent(path));
+    const data = await res.json();
+    driveFiles = data.items || [];
+    applyFilters();
+
+    // Track recent — only from root so we always have full file paths
+    if (!path) {
+      trackRecent(driveFiles);
+    }
+
+    // Update vitality
+    if (!path) {
+      updateVitality({ ...data, capacityBytes: serverInfo.capacityBytes });
+    }
+    return data;
+  } catch(e) {
+    showToast('Failed to load files: ' + e.message, 'error');
+    driveFiles = [];
+    applyFilters();
+  }
+}
+
+async function loadServerInfo() {
+  try {
+    const res = await fetch('/api/info');
+    serverInfo = await res.json();
+    updateSidebarInfo();
+    checkCapacityWarning();
+
+    // LAN IPs in about
+    const lanEl = document.getElementById('lan-ips');
+    if (lanEl && serverInfo.ips && serverInfo.ips.length) {
+      lanEl.innerHTML = serverInfo.ips.map(ip =>
+        `<span class="text-secondary-container font-bold">LAN: http://${ip}:${serverInfo.port || 3000}</span>`
+      ).join(' · ');
+    }
+  } catch {}
+}
+
+// ═══════════════════════════════════
+// SPEEDOMETER GAUGE — SVG-based
+// ═══════════════════════════════════
+let _gaugeTotalBytes = 128 * 1024 ** 3; // fallback until server responds
+let _gaugeUsedBytes  = 0;
+
+// Zone thresholds (fraction of total)
+const ZONE_GREEN_END  = 0.60;
+const ZONE_YELLOW_END = 0.85;
+// red = 0.85 → 1.0
+
+// ── Formatting helpers ────────────────────────────────────────────
+// All supported tiers: B → KB → MB → GB → TB → PB
+const GAUGE_TIERS = [
+  { div: 1,         sym: 'B'  },
+  { div: 1024,      sym: 'KB' },
+  { div: 1024**2,   sym: 'MB' },
+  { div: 1024**3,   sym: 'GB' },
+  { div: 1024**4,   sym: 'TB' },
+  { div: 1024**5,   sym: 'PB' },
+];
+function gaugeTier(bytes) {
+  let t = GAUGE_TIERS[0];
+  for (const tier of GAUGE_TIERS) { if (bytes >= tier.div * 0.9) t = tier; }
+  return t;
+}
+function gaugeFmtCenter(bytes) {
+  if (!bytes || bytes <= 0) return '0 B';
+  const t = gaugeTier(bytes);
+  const v = bytes / t.div;
+  return (v >= 100 ? Math.round(v) : parseFloat(v.toFixed(1))) + ' ' + t.sym;
+}
+
+// ── Pure percentage-based 8-division logic ───────────────────────
+// 9 labels: index 0 = 0%, indices 1–7 = i×12.5%, index 8 = 100%
+// label[i] = i/8 × totalBytes converted to display unit
+// Needle = usedBytes/totalBytes — completely independent of labels
+// Tier: prefer unit where total lands between 1–999 (most readable)
+// 1 decimal if value has fractional part, integer if whole
+function gaugeDivisions(totalBytes) {
+  // Fallback: largest unit where value >= 1
+  let tierIdx = 0;
+  for (let i = GAUGE_TIERS.length - 1; i >= 0; i--) {
+    if (totalBytes / GAUGE_TIERS[i].div >= 1) { tierIdx = i; break; }
+  }
+  // Prefer unit where total is between 1–999 (sweet spot for readability)
+  for (let i = GAUGE_TIERS.length - 1; i >= 0; i--) {
+    const v = totalBytes / GAUGE_TIERS[i].div;
+    if (v >= 1 && v <= 999) { tierIdx = i; break; }
+  }
+  const t = GAUGE_TIERS[tierIdx];
+
+  // 9 labels at equal 12.5% steps
+  const ticks = [];
+  for (let i = 0; i <= 8; i++) {
+    const raw = (i / 8) * totalBytes / t.div;
+    ticks.push(raw % 1 === 0 ? raw : Math.round(raw * 10) / 10);
+  }
+  // Last tick always = exact real total, 1 decimal if needed
+  const realTotal = totalBytes / t.div;
+  ticks[8] = realTotal % 1 === 0 ? realTotal : Math.round(realTotal * 10) / 10;
+
+  return { ticks, tierDiv: t.div, tierSym: t.sym };
+}
+
+// Every label gets unit suffix, decimals preserved
+function gaugeFmtTick(value, tierSym, isFirst, isLast) {
+  return String(value) + tierSym;
+}
+
+// ── Main gauge builder ────────────────────────────────────────────
+function buildGauge(totalBytes, usedBytes) {
+  const CX = 200, CY = 200, R = 132;
+  const START_DEG = 225;
+  const SWEEP_DEG = 270;
+  const MAJOR_N   = 8;   // exactly 8 major divisions
+  const MINOR_N   = 4;   // 4 minor ticks between each major
+
+  function toRad(deg) { return (deg - 90) * Math.PI / 180; }
+  function polarXY(deg, r) {
+    const rad = toRad(deg);
+    return { x: CX + r * Math.cos(rad), y: CY + r * Math.sin(rad) };
+  }
+  function arcPath(startDeg, sweepDeg, r) {
+    if (sweepDeg <= 0.01) return '';
+    if (sweepDeg >= 359.99) sweepDeg = 359.99;
+    const s     = polarXY(startDeg, r);
+    const e     = polarXY(startDeg + sweepDeg, r);
+    const large = sweepDeg > 180 ? 1 : 0;
+    return `M ${s.x.toFixed(2)} ${s.y.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${e.x.toFixed(2)} ${e.y.toFixed(2)}`;
+  }
+
+  const total  = totalBytes > 0 ? totalBytes : 1;
+  const pct    = Math.min(1, usedBytes / total);
+
+  // ── Zone colours for needle/label
+  const zoneColor = pct < ZONE_GREEN_END  ? '#4ade80'
+                  : pct < ZONE_YELLOW_END ? '#facc15'
+                  :                         '#f87171';
+  const zoneRgba  = pct < ZONE_GREEN_END  ? 'rgba(34,197,94,ALPHA)'
+                  : pct < ZONE_YELLOW_END ? 'rgba(250,204,21,ALPHA)'
+                  :                         'rgba(248,113,113,ALPHA)';
+
+  // ── Track (full arc)
+  const track = document.getElementById('gauge-track');
+  if (track) track.setAttribute('d', arcPath(START_DEG, SWEEP_DEG, R));
+
+  // ── Zone background arcs (always full, faint)
+  const zg = document.getElementById('gauge-zone-green');
+  const zy = document.getElementById('gauge-zone-yellow');
+  const zr = document.getElementById('gauge-zone-red');
+  if (zg) zg.setAttribute('d', arcPath(START_DEG,                                    SWEEP_DEG * ZONE_GREEN_END,  R));
+  if (zy) zy.setAttribute('d', arcPath(START_DEG + SWEEP_DEG * ZONE_GREEN_END,       SWEEP_DEG * (ZONE_YELLOW_END - ZONE_GREEN_END), R));
+  if (zr) zr.setAttribute('d', arcPath(START_DEG + SWEEP_DEG * ZONE_YELLOW_END,      SWEEP_DEG * (1 - ZONE_YELLOW_END), R));
+
+  // ── Filled arcs — each zone only fills as far as the needle has gone
+  const fillG = document.getElementById('gauge-arc-fill-green');
+  const fillY = document.getElementById('gauge-arc-fill-yellow');
+  const fillR = document.getElementById('gauge-arc-fill-red');
+
+  // Green portion: 0 → min(pct, ZONE_GREEN_END)
+  const greenFill = Math.min(pct, ZONE_GREEN_END);
+  if (fillG) fillG.setAttribute('d', greenFill > 0 ? arcPath(START_DEG, SWEEP_DEG * greenFill, R) : '');
+
+  // Yellow portion: ZONE_GREEN_END → min(pct, ZONE_YELLOW_END)
+  const yellowFill = Math.max(0, Math.min(pct, ZONE_YELLOW_END) - ZONE_GREEN_END);
+  if (fillY) fillY.setAttribute('d', yellowFill > 0 ? arcPath(START_DEG + SWEEP_DEG * ZONE_GREEN_END, SWEEP_DEG * yellowFill, R) : '');
+
+  // Red portion: ZONE_YELLOW_END → pct
+  const redFill = Math.max(0, pct - ZONE_YELLOW_END);
+  if (fillR) fillR.setAttribute('d', redFill > 0 ? arcPath(START_DEG + SWEEP_DEG * ZONE_YELLOW_END, SWEEP_DEG * redFill, R) : '');
+
+  // ── Needle
+  const needleRot = -135 + SWEEP_DEG * pct;
+  const needleG   = document.getElementById('gauge-needle-g');
+  if (needleG) needleG.setAttribute('transform', `rotate(${needleRot.toFixed(2)},${CX},${CY})`);
+
+  // ── Needle glow color — matches current zone
+  const needlePoly = document.getElementById('gauge-needle-poly');
+  if (needlePoly) needlePoly.setAttribute('fill', zoneColor);
+
+  // ── Pivot dot color
+  const pivot = document.getElementById('gauge-pivot');
+  if (pivot) pivot.setAttribute('stroke', zoneColor);
+
+  // ── Glow class on container
+  const container = document.getElementById('gauge-container');
+  if (container) {
+    container.classList.remove('gauge-glow-green', 'gauge-glow-yellow', 'gauge-glow-red', 'gauge-glow-cyan', 'gauge-glow');
+    container.classList.add(
+      pct < ZONE_GREEN_END  ? 'gauge-glow-green'  :
+      pct < ZONE_YELLOW_END ? 'gauge-glow-yellow' : 'gauge-glow-red'
+    );
+  }
+
+  // ── Center label — used value
+  const labelUsed = document.getElementById('gauge-label-used');
+  if (labelUsed) {
+    labelUsed.textContent = gaugeFmtCenter(usedBytes);
+    labelUsed.setAttribute('fill', zoneColor);
+  }
+
+  // ── Tick marks — 8 equal arc segments × 4 minor ticks
+  const { ticks, tierDiv, tierSym } = gaugeDivisions(total);
+  const totalTicks = MAJOR_N * (MINOR_N + 1);
+
+  const tickG = document.getElementById('gauge-ticks');
+  if (!tickG) return;
+  tickG.innerHTML = '';
+
+  for (let i = 0; i <= totalTicks; i++) {
+    const tPct     = i / totalTicks;
+    const deg      = START_DEG + SWEEP_DEG * tPct;
+    const isMajor  = (i % (MINOR_N + 1)) === 0;
+    const isPassed = tPct <= pct + 1e-6;
+
+    const outerR = R + 4;
+    const innerR = isMajor ? R - 18 : R - 9;
+    const p1 = polarXY(deg, innerR);
+    const p2 = polarXY(deg, outerR);
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', p1.x.toFixed(1)); line.setAttribute('y1', p1.y.toFixed(1));
+    line.setAttribute('x2', p2.x.toFixed(1)); line.setAttribute('y2', p2.y.toFixed(1));
+
+    if (isPassed && isMajor) {
+      line.setAttribute('stroke', zoneColor);
+      line.setAttribute('stroke-width', '2.4');
+      line.setAttribute('filter', 'url(#arc-glow)');
+    } else if (isPassed) {
+      line.setAttribute('stroke', zoneRgba.replace('ALPHA', '0.5'));
+      line.setAttribute('stroke-width', '1.2');
+    } else {
+      line.setAttribute('stroke', isMajor ? 'rgba(255,255,255,0.38)' : 'rgba(255,255,255,0.13)');
+      line.setAttribute('stroke-width', isMajor ? '1.8' : '0.9');
+    }
+    tickG.appendChild(line);
+
+    if (isMajor) {
+      const majorIndex = i / (MINOR_N + 1); // 0–8
+      const isFirst    = majorIndex === 0;
+      const isLast     = majorIndex === MAJOR_N;
+      const tickValue  = ticks[majorIndex]; // ticks[0]=0, ticks[8]=real total
+
+      // Bottom-left (first) and bottom-right (last) labels need inward nudge
+      const labelR = (isFirst || isLast) ? innerR - 10 : innerR - 16;
+      const lp     = polarXY(deg, labelR);
+      const text   = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('x', lp.x.toFixed(1));
+      text.setAttribute('y', lp.y.toFixed(1));
+      text.setAttribute('font-family', 'Montserrat,sans-serif');
+      text.setAttribute('dominant-baseline', 'middle');
+      text.setAttribute('text-anchor', isLast ? 'end' : isFirst ? 'start' : 'middle');
+      text.setAttribute('font-size', '9.5');
+
+      if (isPassed) {
+        text.setAttribute('fill', zoneColor);
+        text.setAttribute('font-weight', '800');
+        text.setAttribute('filter', 'url(#label-glow)');
+      } else {
+        text.setAttribute('fill', 'rgba(255,255,255,0.4)');
+        text.setAttribute('font-weight', '600');
+      }
+      text.textContent = gaugeFmtTick(tickValue, tierSym, isFirst, isLast);
+      tickG.appendChild(text);
+    }
+  }
+}
+
+function updateVitality(data) {
+  const usedBytes  = data.totalUsedBytes || data.usedBytes || 0;
+  const totalBytes = (data.capacityBytes && data.capacityBytes > 0)
+                     ? data.capacityBytes : _gaugeTotalBytes;
+  const freeBytes  = Math.max(0, totalBytes - usedBytes);
+
+  if (data.capacityBytes && data.capacityBytes > 0) _gaugeTotalBytes = data.capacityBytes;
+  _gaugeUsedBytes = usedBytes;
+
+  setTimeout(() => buildGauge(totalBytes, usedBytes), 80);
+
+  // Used / Free labels
+  const usedLbl = document.getElementById('gauge-used-label');
+  const freeLbl = document.getElementById('gauge-free-label');
+  if (usedLbl) usedLbl.textContent = gaugeFmtCenter(usedBytes);
+  if (freeLbl) freeLbl.textContent = gaugeFmtCenter(freeBytes);
+
+  // File count + live pulse
+  const fileCount = document.getElementById('vitality-file-count');
+  const pulse     = document.getElementById('file-count-pulse');
+  if (fileCount) {
+    fileCount.textContent = (data.fileCount || 0).toLocaleString();
+    if (pulse) {
+      pulse.classList.remove('hidden');
+      clearTimeout(pulse._t);
+      pulse._t = setTimeout(() => pulse.classList.add('hidden'), 2000);
+    }
+  }
+
+  checkCapacityWarning();
+}
+function updateSidebarInfo() {
+  const usedBytes = serverInfo.usedBytes || 0;
+  const usedFmt   = serverInfo.usedFormatted || '—';
+  const label     = serverInfo.volumeLabel || 'VoltDrive';
+
+  // Sidebar sub-line: "72.3 MB used · localhost:3000"
+  const sub = document.getElementById('sidebar-device-sub');
+  if (sub) sub.textContent = usedFmt + ' used · localhost:' + (serverInfo.port || 3000);
+
+  // Sidebar device name heading
+  const devName = document.getElementById('device-name');
+  if (devName) devName.textContent = label;
+
+  // Top nav brand
+  const brand = document.getElementById('topnav-brand');
+  if (brand) brand.textContent = label;
+
+  // About page device card heading
+  const aboutLabel = document.getElementById('about-dev-label');
+  if (aboutLabel) aboutLabel.textContent = label + ' · PenServe 2';
+
+  // Drop zone subtitle (only when not uploading)
+  const dzSub = document.getElementById('dz-subtitle');
+  if (dzSub && !dzSub.dataset.uploading) {
+    dzSub.textContent = 'Upload files instantly to ' + label + '.';
+  }
+
+  // Page <title>
+  document.title = label + ' — VoltDrive';
+}
+
+function checkCapacityWarning() {
+  const usedBytes = serverInfo.usedBytes || 0;
+  const pct = _gaugeTotalBytes > 0 ? (usedBytes / _gaugeTotalBytes) * 100 : 0;
+  const isWarn = pct >= 80;
+
+  // Notification panel warning
+  const notifWarn = document.getElementById('notif-capacity-warn');
+  if (notifWarn) notifWarn.classList.toggle('hidden', !isWarn);
+  if (isWarn) {
+    const txt = document.getElementById('notif-capacity-text');
+    if (txt) txt.textContent = `Drive is at ${Math.round(pct)}% capacity (${serverInfo.usedFormatted} used). Consider cleaning up to free space.`;
+    // Show badge on sidebar notification button
+    const badge = document.getElementById('notif-sidebar-badge');
+    if (badge) { badge.textContent = '!'; badge.classList.remove('hidden'); }
+  }
+
+  // Files view warning
+  const filesWarn = document.getElementById('files-capacity-warn');
+  if (filesWarn) filesWarn.classList.toggle('hidden', !isWarn);
+  if (isWarn) {
+    const txt2 = document.getElementById('files-capacity-text');
+    if (txt2) txt2.textContent = `Usage is at ${Math.round(pct)}% (${serverInfo.usedFormatted}). Free up space by emptying Trash.`;
+  }
+}
+
+// ═══════════════════════════════════
+// NOTIFICATIONS PANEL
+// ═══════════════════════════════════
+function openNotifPanel() {
+  document.getElementById('notif-panel').classList.add('open');
+  document.getElementById('notif-overlay').classList.remove('hidden');
+  notifPanelOpen = true;
+  loadLogs();
+}
+function closeNotifPanel() {
+  document.getElementById('notif-panel').classList.remove('open');
+  document.getElementById('notif-overlay').classList.add('hidden');
+  notifPanelOpen = false;
+}
+
+async function loadLogs() {
+  try {
+    const res = await fetch('/api/logs');
+    const data = await res.json();
+    logEntries = data.entries || [];
+    renderLogs();
+  } catch {}
+}
+
+// Called after any action that produces a log entry (upload, delete, restore)
+// Fetches fresh logs and immediately updates the badge — no panel open needed
+async function syncLogs() {
+  try {
+    const res = await fetch('/api/logs');
+    const data = await res.json();
+    logEntries = data.entries || [];
+    updateLogBadge();
+    renderLogs(); // always keep entries ready, panel reads from logEntries
+  } catch {}
+}
+
+function updateLogBadge() {
+  const badge = document.getElementById('notif-sidebar-badge');
+  if (!badge) return;
+  if (logEntries.length > 0) {
+    badge.textContent = logEntries.length > 99 ? '99+' : logEntries.length;
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
+}
+
+// Refresh all dynamic UI after any state-changing action
+async function refreshAll() {
+  const [filesData] = await Promise.all([
+    loadFiles(),
+    loadServerInfo(),
+    loadTrash(),
+    syncLogs(),
+  ]);
+  if (filesData) trackRecent(filesData.items || []);
+}
+
+function renderLogs() {
+  const list = document.getElementById('notif-list');
+  const empty = document.getElementById('notif-empty');
+  if (!list) return;
+
+  // Clear existing entries (keep empty state)
+  list.querySelectorAll('.notif-entry').forEach(el => el.remove());
+
+  if (logEntries.length === 0) {
+    if (empty) empty.style.display = 'flex';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  logEntries.forEach(entry => {
+    const el = document.createElement('div');
+    el.className = 'notif-entry';
+
+    const isDelete   = entry.action === 'deleted';
+    const isRestore  = entry.action === 'restored';
+    const isUpload   = entry.action === 'uploaded';
+    const dotColor   = isDelete ? '#ffb4ab' : isRestore ? '#94db00' : '#00eefc';
+    const actionLabel = isDelete ? 'Deleted' : isRestore ? 'Restored' : isUpload ? 'Uploaded' : entry.action;
+    const iconName   = isDelete ? 'delete' : isRestore ? 'restore_from_trash' : isUpload ? 'upload' : 'info';
+    const iconColor  = isDelete ? 'color:#ffb4ab' : isRestore ? 'color:#94db00' : 'color:#00eefc';
+
+    el.innerHTML = `
+      <div class="notif-badge-dot mt-1" style="background:${dotColor};flex-shrink:0;margin-top:5px;"></div>
+      <span class="material-symbols-outlined text-[14px] shrink-0" style="${iconColor}">${iconName}</span>
+      <div class="flex-1 min-w-0">
+        <p class="text-[11px] font-bold text-on-surface truncate" title="${entry.name}">${entry.name}</p>
+        <div class="flex items-center gap-2 mt-0.5 flex-wrap">
+          <span class="text-[9px] font-bold uppercase tracking-wider" style="${iconColor}">${actionLabel}</span>
+          <span class="text-[9px] text-outline">·</span>
+          <span class="text-[9px] text-outline">${entry.size || '—'}</span>
+          <span class="text-[9px] text-outline">·</span>
+          <span class="text-[9px] text-outline">${fmtDate(entry.timestamp)}</span>
+        </div>
+      </div>
+    `;
+    list.appendChild(el);
+  });
+
+  updateLogBadge();
+}
+
+async function clearLogs() {
+  if (!confirm('Clear all activity logs? This cannot be undone.')) return;
+  try {
+    await fetch('/api/logs', { method: 'DELETE' });
+    logEntries = [];
+    renderLogs();
+    updateLogBadge();
+    showToast('Activity log cleared', 'success');
+  } catch(e) { showToast('Failed to clear logs', 'error'); }
+}
+
+// ═══════════════════════════════════
+// FAVORITES
+// ═══════════════════════════════════
+function isFav(name) { return favorites.has(name); }
+function toggleFav(name, starEl) {
+  if (favorites.has(name)) {
+    favorites.delete(name);
+    starEl.textContent = 'star';
+    starEl.classList.remove('star-glow-active');
+    starEl.style.cssText = 'font-size:14px;color:#514255;cursor:pointer;transition:all 0.2s;flex-shrink:0;';
+    starEl.title = 'Add to favorites';
+  } else {
+    favorites.add(name);
+    starEl.classList.add('star-glow-active');
+    starEl.style.cssText = 'font-size:14px;color:#f4c542;cursor:pointer;transition:all 0.2s;flex-shrink:0;font-variation-settings:"FILL" 1,"wght" 400,"GRAD" 0,"opsz" 24;';
+    starEl.title = 'Remove from favorites';
+  }
+}
+function makeStar(name) {
+  const star = document.createElement('span');
+  star.className = 'material-symbols-outlined';
+  star.textContent = 'star';
+  if (isFav(name)) {
+    star.classList.add('star-glow-active');
+    star.style.cssText = 'font-size:14px;color:#f4c542;cursor:pointer;transition:all 0.2s;flex-shrink:0;font-variation-settings:"FILL" 1,"wght" 400,"GRAD" 0,"opsz" 24;';
+    star.title = 'Remove from favorites';
+  } else {
+    star.style.cssText = 'font-size:14px;color:#514255;cursor:pointer;transition:all 0.2s;flex-shrink:0;';
+    star.title = 'Add to favorites';
+  }
+  star.addEventListener('click', e => { e.stopPropagation(); toggleFav(name, star); });
+  return star;
+}
+
+// ═══════════════════════════════════
+// TRASH (server-backed)
+// ═══════════════════════════════════
+async function loadTrash() {
+  try {
+    const res = await fetch('/api/trash');
+    const data = await res.json();
+    trashItems = data.items || [];
+    updateTrashBadge();
+    renderTrashView(data);
+  } catch(e) {
+    showToast('Failed to load trash', 'error');
+  }
+}
+
+async function moveToTrash(file) {
+  try {
+    const res = await fetch('/api/trash', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: file.path }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    pruneRecent(file.name); // remove from recents immediately — don't wait for refreshAll
+    showToast(`"${file.name}" moved to Trash`, 'info');
+    await refreshAll();
+  } catch(e) { showToast('Delete failed: ' + e.message, 'error'); }
+}
+
+async function restoreFromTrash(trashName, name) {
+  try {
+    const res = await fetch('/api/trash/restore', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trashName }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    showToast(`"${name}" restored`, 'success');
+    await refreshAll();
+  } catch(e) { showToast('Restore failed: ' + e.message, 'error'); }
+}
+
+async function deleteForever(trashName, name) {
+  if (!confirm(`Permanently delete "${name}"? This cannot be undone.`)) return;
+  try {
+    const res = await fetch('/api/trash', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trashName }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    showToast(`"${name}" permanently deleted`, 'info');
+    await refreshAll();
+  } catch(e) { showToast('Delete failed: ' + e.message, 'error'); }
+}
+
+async function emptyTrash() {
+  if (trashItems.length === 0) return;
+  if (!confirm(`Permanently delete all ${trashItems.length} item(s) in Trash? This cannot be undone.`)) return;
+  try {
+    await fetch('/api/trash', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trashName: '__all__' }),
+    });
+    showToast('Trash emptied', 'info');
+    await refreshAll();
+  } catch(e) { showToast('Failed to empty trash', 'error'); }
+}
+
+function updateTrashBadge() {
+  const badge = document.getElementById('trash-count-badge');
+  const mb    = document.getElementById('trash-mobile-badge');
+  if (trashItems.length > 0) {
+    if (badge) { badge.textContent = trashItems.length; badge.classList.remove('hidden'); }
+    if (mb)    { mb.textContent    = trashItems.length; mb.classList.remove('hidden'); }
+  } else {
+    if (badge) badge.classList.add('hidden');
+    if (mb)    mb.classList.add('hidden');
+  }
+}
+
+function renderTrashView(data) {
+  const hint     = document.getElementById('trash-empty-hint');
+  const header   = document.getElementById('trash-table-header');
+  const body     = document.getElementById('trash-body');
+  const emptyBtn = document.getElementById('empty-trash-btn');
+  const statsBar = document.getElementById('trash-stats-bar');
+  const statCount = document.getElementById('trash-stat-count');
+  const statSize  = document.getElementById('trash-stat-size');
+  const subtitle  = document.getElementById('trash-subtitle');
+
+  if (!trashItems.length) {
+    hint.style.display = 'flex';
+    header.classList.add('hidden');
+    body.innerHTML = '';
+    emptyBtn.classList.add('hidden');
+    statsBar.classList.add('hidden');
+    subtitle.textContent = 'Items moved here won\'t be deleted until you choose';
+    return;
+  }
+
+  hint.style.display = 'none';
+  header.classList.remove('hidden');
+  emptyBtn.classList.remove('hidden');
+  statsBar.classList.remove('hidden');
+
+  if (statCount) statCount.textContent = trashItems.length;
+  if (statSize)  statSize.textContent  = (data && data.totalSize) ? data.totalSize : '—';
+  if (subtitle)  subtitle.textContent  = trashItems.length + ' item' + (trashItems.length !== 1 ? 's' : '') + ' waiting for removal';
+
+  body.innerHTML = '';
+  trashItems.forEach(f => {
+    const row = document.createElement('div');
+    row.className = 'flex items-center gap-3 px-4 py-3 border-b border-outline-variant/10 transition-colors';
+    row.style.cssText = 'transition:background 0.1s;';
+    row.onmouseenter = () => row.style.background = 'rgba(255,180,171,0.03)';
+    row.onmouseleave = () => row.style.background = '';
+
+    const deletedStr = fmtDate(f.deletedAt);
+
+    row.innerHTML = `
+      <span class="material-symbols-outlined text-sm text-outline/60 shrink-0">${fileIcon(f.type, f.name)}</span>
+      <div class="flex-1 min-w-0">
+        <p class="text-xs font-bold text-on-surface-variant truncate line-through decoration-error/30" title="${f.name}">${f.name}</p>
+        <p class="text-[9px] text-outline mt-0.5">${fileTypeName(f.type, f.name)} · Deleted ${deletedStr}</p>
+      </div>
+      <span class="text-[10px] text-outline shrink-0 hidden md:block w-20 text-right">${f.size || '—'}</span>
+      <div class="flex items-center gap-1 shrink-0 ml-2">
+        <button class="btn-restore flex items-center gap-1 px-2.5 py-1.5 rounded border font-bold text-[10px] transition-all"
+          style="color:#94db00;border-color:rgba(148,219,0,0.25);background:rgba(148,219,0,0.06);"
+          onmouseover="this.style.background='rgba(148,219,0,0.14)'" onmouseout="this.style.background='rgba(148,219,0,0.06)'"
+          title="Restore to files">
+          <span class="material-symbols-outlined text-[12px]">restore_from_trash</span> Restore
+        </button>
+        <button class="btn-perm-del w-7 h-7 flex items-center justify-center rounded border border-transparent text-error hover:bg-error/10 hover:border-error/30 transition-all" title="Delete permanently">
+          <span class="material-symbols-outlined text-[13px]">delete_forever</span>
+        </button>
+      </div>
+    `;
+    row.querySelector('.btn-restore').addEventListener('click', () => restoreFromTrash(f.trashName, f.name));
+    row.querySelector('.btn-perm-del').addEventListener('click', () => deleteForever(f.trashName, f.name));
+    body.appendChild(row);
+  });
+}
+
+// ═══════════════════════════════════
+// RENDER DRIVE FILES TABLE
+// ═══════════════════════════════════
+function renderFilesTable(containerId, files) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (files.length === 0) {
+    container.innerHTML = `
+      <div class="flex flex-col items-center justify-center py-16 gap-3">
+        <span class="material-symbols-outlined text-3xl text-outline/30">folder_open</span>
+        <p class="text-outline text-xs font-bold">No files yet</p>
+        <p class="text-outline/50 text-[10px]">Upload files or create a folder to get started</p>
+      </div>`;
+    return;
+  }
+
+  files.forEach(f => {
+    const card = document.createElement('div');
+    card.className = 'file-card';
+
+    const canBrowse = f.type === 'folder';
+    const iconName  = fileIcon(f.type, f.name);
+    const dateStr   = fmtDate(f.modified);
+    const typeLabel = fileTypeName ? fileTypeName(f.type, f.name) : (canBrowse ? 'Folder' : f.type);
+
+    // Folder size: use sizeBytes from server (getDirSize is recursive), fallback to f.size
+    let sizeStr = f.size || '';
+    if (canBrowse && f.sizeBytes != null) {
+      sizeStr = f.sizeBytes > 0 ? fmtBytes(f.sizeBytes) : '0 B';
+    } else if (canBrowse && !sizeStr) {
+      sizeStr = '—';
+    }
+
+    // ── Icon color hex map (matches iconColorHex / fileIconColor) ──
+    const ext = (f.name || '').split('.').pop().toLowerCase();
+    const iconHexMap = {
+      folder:  { bg:'rgba(244,197,66,0.12)', border:'rgba(244,197,66,0.28)', color:'#f4c542' },
+      movie:   { bg:'rgba(236,178,255,0.12)', border:'rgba(236,178,255,0.3)',  color:'#ecb2ff' },
+      audio_file:{ bg:'rgba(0,238,252,0.1)',  border:'rgba(0,238,252,0.25)',   color:'#00eefc' },
+      image:   { bg:'rgba(0,238,252,0.1)',    border:'rgba(0,238,252,0.25)',   color:'#00eefc' },
+      picture_as_pdf:{ bg:'rgba(255,180,171,0.12)', border:'rgba(255,180,171,0.3)', color:'#ffb4ab' },
+      description:{ bg:'rgba(236,178,255,0.1)',border:'rgba(236,178,255,0.25)',color:'#ecb2ff' },
+      folder_zip:{ bg:'rgba(148,219,0,0.1)', border:'rgba(148,219,0,0.25)',   color:'#94db00' },
+      code:    { bg:'rgba(148,219,0,0.1)',    border:'rgba(148,219,0,0.25)',   color:'#94db00' },
+      table_chart:{ bg:'rgba(148,219,0,0.1)',border:'rgba(148,219,0,0.22)',   color:'#94db00' },
+      terminal:{ bg:'rgba(157,139,160,0.1)', border:'rgba(157,139,160,0.2)',  color:'#9d8ba0' },
+      insert_drive_file:{ bg:'rgba(157,139,160,0.08)', border:'rgba(157,139,160,0.18)', color:'#9d8ba0' },
+    };
+    const theme = iconHexMap[canBrowse ? 'folder' : iconName] || iconHexMap['insert_drive_file'];
+
+    // ── Icon box ──
+    const iconBox = document.createElement('div');
+    iconBox.className = 'shrink-0 w-10 h-10 rounded-lg flex items-center justify-center';
+    iconBox.style.cssText = `background:${theme.bg};border:1px solid ${theme.border};box-shadow:0 0 8px ${theme.bg};`;
+    iconBox.innerHTML = `<span class="material-symbols-outlined text-lg" style="color:${theme.color};">${iconName}</span>`;
+
+    // ── Star ──
+    const starEl = makeStar(f.name);
+    starEl.style.cssText += 'flex-shrink:0;';
+
+    // ── Name + meta ──
+    const info = document.createElement('div');
+    info.className = 'flex-1 min-w-0';
+    info.innerHTML = `
+      <p class="font-bold text-xs text-on-surface truncate" title="${f.name}">${f.name}</p>
+      <p class="file-card-meta truncate">${typeLabel}${sizeStr && sizeStr !== '—' ? ' · ' + sizeStr : ''}${dateStr ? ' · ' + dateStr : ''}</p>`;
+
+    // Name click
+    info.querySelector('p').style.cursor = 'pointer';
+    info.querySelector('p').addEventListener('click', () => {
+      if (canBrowse) openFolderTab(f);
+      else openFileTab(f, 'files');
+    });
+    info.querySelector('p').addEventListener('dblclick', e => { e.stopPropagation(); startRename(f, info.querySelector('p')); });
+
+    // ── Size pill (desktop only) ──
+    const sizePill = document.createElement('span');
+    sizePill.className = 'hidden md:block text-[10px] text-outline shrink-0 w-20 text-right';
+    sizePill.textContent = sizeStr;
+
+    // ── Actions ──
+    const acts = document.createElement('div');
+    acts.className = 'fc-actions flex items-center gap-1';
+
+    const dlBtn = document.createElement('button');
+    dlBtn.className = 'action-dl w-7 h-7 flex items-center justify-center rounded border border-transparent transition-all text-on-surface-variant';
+    dlBtn.title = canBrowse ? 'Download as ZIP' : 'Download';
+    dlBtn.innerHTML = `<span class="material-symbols-outlined text-[14px]">${canBrowse ? 'folder_zip' : 'download'}</span>`;
+    dlBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      window.location.href = canBrowse
+        ? '/api/download-folder?path=' + encodeURIComponent(f.path)
+        : '/api/download?path=' + encodeURIComponent(f.path);
+    });
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'action-del w-7 h-7 flex items-center justify-center rounded border border-transparent transition-all text-on-surface-variant';
+    delBtn.title = 'Move to Trash';
+    delBtn.innerHTML = `<span class="material-symbols-outlined text-[14px]">delete</span>`;
+    delBtn.addEventListener('click', e => { e.stopPropagation(); moveToTrash(f); });
+
+    acts.appendChild(dlBtn);
+    acts.appendChild(delBtn);
+
+    card.appendChild(iconBox);
+    card.appendChild(starEl);
+    card.appendChild(info);
+    card.appendChild(sizePill);
+    card.appendChild(acts);
+
+    // Show actions on touch devices too
+    card.addEventListener('mouseenter', () => acts.style.opacity = '1');
+    card.addEventListener('mouseleave', () => acts.style.opacity = '0');
+
+    container.appendChild(card);
+  });
+}
+
+// ═══════════════════════════════════
+// RENAME
+// ═══════════════════════════════════
+function startRename(file, nameEl) {
+  const oldName = file.name;
+  const input = document.createElement('input');
+  input.className = 'rename-input';
+  input.value = oldName;
+  nameEl.replaceWith(input);
+  input.focus();
+  input.select();
+
+  const commit = async () => {
+    const newName = input.value.trim();
+    if (!newName || newName === oldName) {
+      input.replaceWith(nameEl);
+      return;
+    }
+    try {
+      const fromPath = file.path;
+      const dir      = fromPath.includes('/') ? fromPath.substring(0, fromPath.lastIndexOf('/') + 1) : '';
+      const toPath   = dir + newName;
+      const res = await fetch('/api/files', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from: fromPath, to: toPath }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+      showToast(`Renamed to "${newName}"`, 'success');
+      await loadFiles();
+    } catch(e) {
+      showToast('Rename failed: ' + e.message, 'error');
+      input.replaceWith(nameEl);
+    }
+  };
+  input.addEventListener('blur', commit);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter')  { e.preventDefault(); commit(); }
+    if (e.key === 'Escape') { input.replaceWith(nameEl); }
+  });
+}
+
+// ═══════════════════════════════════
+// NEW FOLDER
+// ═══════════════════════════════════
+async function promptNewFolder() {
+  const name = prompt('Folder name:');
+  if (!name || !name.trim()) return;
+  try {
+    const res = await fetch('/api/folder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: name.trim() }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    showToast(`Folder "${name}" created`, 'success');
+    await loadFiles();
+  } catch(e) { showToast('Failed to create folder: ' + e.message, 'error'); }
+}
+
+// ═══════════════════════════════════
+// SIDEBAR TABS
+// ═══════════════════════════════════
+function renderSidebarTabs() {
+  const container = document.getElementById('sidebar-tabs-container');
+  const hint = document.getElementById('no-tabs-hint');
+  const countEl = document.getElementById('tab-count');
+  if (countEl) countEl.textContent = openTabs.length;
+  if (hint) hint.style.display = openTabs.length === 0 ? 'block' : 'none';
+
+  container.querySelectorAll('.sidebar-tab').forEach(el => el.remove());
+  openTabs.forEach((tab, idx) => {
+    const el = document.createElement('div');
+    el.className = 'sidebar-tab' + (idx === activeTabIdx ? ' active' : '');
+    const isFileTab = tab.tabType === 'file';
+    const tabIcon = isFileTab ? fileIcon(tab.data.type, tab.data.name) : 'folder_open';
+    const { col: tabIconCol } = isFileTab ? resolveIconColors(tab.data.type, tab.data.name) : { col: '#9d8ba0' };
+    el.innerHTML = `
+      <span class="material-symbols-outlined text-[13px]" style="color:${isFileTab ? tabIconCol : ''}">${tabIcon}</span>
+      <span class="truncate flex-1" style="max-width:100px" title="${tab.data.name}">${tab.data.name}</span>
+      <span class="tab-close material-symbols-outlined text-[12px]">close</span>
+    `;
+    el.querySelector('.tab-close').addEventListener('click', e => { e.stopPropagation(); closeTab(idx); });
+    el.addEventListener('click', () => switchToTab(idx));
+    container.appendChild(el);
+  });
+
+  // Mobile tabs
+  const mobileBar  = document.getElementById('mobile-tab-bar');
+  const mobileHint = document.getElementById('mobile-no-tabs-hint');
+  mobileBar.querySelectorAll('.mobile-tab').forEach(el => el.remove());
+  if (openTabs.length === 0) {
+    if (mobileHint) mobileHint.style.display = 'block';
+  } else {
+    if (mobileHint) mobileHint.style.display = 'none';
+    openTabs.forEach((tab, idx) => {
+      const el = document.createElement('div');
+      el.className = 'mobile-tab' + (idx === activeTabIdx ? ' active' : '');
+      const isFileTab = tab.tabType === 'file';
+      const mobileIcon = isFileTab ? fileIcon(tab.data.type, tab.data.name) : 'folder_open';
+      el.innerHTML = `
+        <span class="material-symbols-outlined" style="font-size:11px;">${mobileIcon}</span>
+        <span style="max-width:90px;overflow:hidden;text-overflow:ellipsis;">${tab.data.name}</span>
+        <span class="mt-close material-symbols-outlined">close</span>
+      `;
+      el.querySelector('.mt-close').addEventListener('click', e => { e.stopPropagation(); closeTab(idx); });
+      el.addEventListener('click', () => switchToTab(idx));
+      mobileBar.appendChild(el);
+    });
+  }
+}
+
+function openFolderTab(folderData) {
+  const existing = openTabs.findIndex(t => t.data.path === folderData.path);
+  if (existing !== -1) { switchToTab(existing); return; }
+  openTabs.push({ data: folderData });
+  activeTabIdx = openTabs.length - 1;
+  renderSidebarTabs();
+  renderFolderView(folderData);
+  showView('folder');
+  highlightNav('');
+}
+
+function switchToTab(idx) {
+  activeTabIdx = idx;
+  renderSidebarTabs();
+  const tab = openTabs[idx];
+  if (tab.tabType === 'file') {
+    openFileViewer(tab.data, fpSource || 'files');
+  } else {
+    renderFolderView(tab.data);
+    showView('folder');
+  }
+}
+
+function closeTab(idx) {
+  openTabs.splice(idx, 1);
+  if (openTabs.length === 0) {
+    activeTabIdx = -1;
+    showView('files');
+    highlightNav('nav-files');
+  } else {
+    activeTabIdx = Math.min(idx, openTabs.length - 1);
+    const tab = openTabs[activeTabIdx];
+    if (tab.tabType === 'file') {
+      openFileViewer(tab.data, fpSource || 'files');
+    } else {
+      renderFolderView(tab.data);
+      showView('folder');
+    }
+  }
+  renderSidebarTabs();
+}
+
+// ═══════════════════════════════════
+// FOLDER TREE VIEW (server-backed)
+// ═══════════════════════════════════
+async function renderFolderView(folderData) {
+  document.getElementById('folder-view-title').textContent = folderData.name;
+  const root = document.getElementById('tree-root');
+  root.innerHTML = '<div class="flex items-center gap-2 text-outline py-4"><span class="material-symbols-outlined spin-icon text-base">refresh</span><span class="text-xs">Loading…</span></div>';
+
+  try {
+    const res  = await fetch('/api/files?path=' + encodeURIComponent(folderData.path));
+    const data = await res.json();
+    root.innerHTML = '';
+    if (!data.items || data.items.length === 0) {
+      root.innerHTML = '<p class="text-outline text-xs italic px-2 py-4">Empty folder</p>';
+      return;
+    }
+    data.items.forEach(child => root.appendChild(buildTreeNode(child, 0)));
+  } catch(e) {
+    root.innerHTML = '<p class="text-error text-xs px-2 py-4">Failed to load folder</p>';
+  }
+}
+
+function buildTreeNode(node, depth) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'tree-node';
+  const row = document.createElement('div');
+  row.className = 'node-row';
+  row.style.paddingLeft = (depth * 12) + 'px';
+
+  const canExpand = node.type === 'folder';
+  let expanded = false;
+
+  row.innerHTML = `
+    <span class="material-symbols-outlined text-[13px] ${fileIconColor(node.type, node.name)} shrink-0">${fileIcon(node.type, node.name)}</span>
+    <span class="flex-1 truncate text-[11px] font-medium text-on-surface">${node.name}</span>
+    ${node.size ? `<span class="text-[9px] text-outline shrink-0 mr-1">${node.size}</span>` : ''}
+    ${canExpand ? `<span class="expand-arrow material-symbols-outlined text-[13px] text-outline transition-transform">chevron_right</span>` : ''}
+  `;
+  const starInTree = makeStar(node.name);
+  row.insertBefore(starInTree, row.childNodes[1]);
+
+  const childrenContainer = document.createElement('div');
+  childrenContainer.className = 'tree-children hidden';
+
+  if (canExpand) {
+    row.addEventListener('click', async () => {
+      expanded = !expanded;
+      childrenContainer.classList.toggle('hidden', !expanded);
+      const arrow = row.querySelector('.expand-arrow');
+      if (arrow) arrow.style.transform = expanded ? 'rotate(90deg)' : '';
+      row.classList.toggle('selected', expanded);
+
+      if (expanded && childrenContainer.children.length === 0) {
+        childrenContainer.innerHTML = '<div class="py-2 px-2 text-[10px] text-outline flex items-center gap-1"><span class="material-symbols-outlined spin-icon text-[12px]">refresh</span> Loading…</div>';
+        try {
+          const res = await fetch('/api/files?path=' + encodeURIComponent(node.path));
+          const data = await res.json();
+          childrenContainer.innerHTML = '';
+          if (data.items && data.items.length > 0) {
+            data.items.forEach(child => childrenContainer.appendChild(buildTreeNode(child, depth + 1)));
+          } else {
+            childrenContainer.innerHTML = '<p class="text-[10px] text-outline italic px-2 py-1">Empty</p>';
+          }
+        } catch { childrenContainer.innerHTML = '<p class="text-error text-[10px] px-2 py-1">Failed to load</p>'; }
+      }
+    });
+  } else {
+    row.addEventListener('click', () => openFileTab(node, 'folder'));
+  }
+
+  wrapper.appendChild(row);
+  if (canExpand) wrapper.appendChild(childrenContainer);
+  return wrapper;
+}
+
+// ═══════════════════════════════════
+// FILE PREVIEW (new tab-based system)
+// ═══════════════════════════════════
+let fpCurrentFile = null;
+let fpSource = 'files'; // 'files' | 'folder' | 'home'
+let hlJsLoaded = false;
+
+// Map file extension → preview type
+function resolvePreviewType(name) {
+  const ext = (name || '').split('.').pop().toLowerCase();
+  const map = {
+    // images
+    jpg:'image', jpeg:'image', png:'image', gif:'image', webp:'image',
+    svg:'image', bmp:'image', heic:'image',
+    // video
+    mp4:'video', mov:'video', avi:'video', mkv:'video', webm:'video',
+    // audio
+    mp3:'audio', wav:'audio', flac:'audio', aac:'audio', ogg:'audio',
+    // pdf
+    pdf:'pdf',
+    // csv (before json/code check)
+    csv:'csv',
+    // json pretty
+    json:'json',
+    // code/text
+    js:'code', ts:'code', py:'code', html:'code', css:'code',
+    xml:'code', sh:'code', yaml:'code', yml:'code', toml:'code',
+    ini:'code', php:'code', rb:'code', go:'code', rs:'code',
+    c:'code', cpp:'code', h:'code', java:'code', sql:'code',
+    r:'code', swift:'code', kt:'code', txt:'code', md:'code',
+  };
+  return map[ext] || 'none';
+}
+
+// Resolve the highlight.js language alias from file extension
+function hlLang(name) {
+  const ext = (name || '').split('.').pop().toLowerCase();
+  const m = {
+    js:'javascript', ts:'typescript', py:'python', html:'xml', css:'css',
+    json:'json', xml:'xml', sh:'bash', yaml:'yaml', yml:'yaml', toml:'ini',
+    php:'php', rb:'ruby', go:'go', rs:'rust', c:'c', cpp:'cpp', h:'c',
+    java:'java', sql:'sql', swift:'swift', kt:'kotlin', md:'markdown',
+    txt:'plaintext',
+  };
+  return m[ext] || 'plaintext';
+}
+
+function openFileViewer(file, source) {
+  fpSource = source || 'files';
+  fpCurrentFile = file;
+
+  // Update tab header
+  const ext = (file.name || '').split('.').pop().toLowerCase();
+  const { col } = resolveIconColors(file.type, file.name);
+  document.getElementById('fp-icon').textContent = fileIcon(file.type, file.name);
+  document.getElementById('fp-icon').style.color = col;
+  document.getElementById('fp-title').textContent = file.name;
+
+  // Back / close tab buttons
+  document.getElementById('fp-back-btn').onclick = () => fileViewerBack();
+  document.getElementById('fp-tab-close').onclick = () => {
+    // close the tab for this file if open
+    const idx = openTabs.findIndex(t => t.data.path === file.path && t.tabType === 'file');
+    if (idx !== -1) closeTab(idx);
+    else fileViewerBack();
+  };
+
+  // Build info bar
+  const { col: badgeCol, bg: badgeBg, bdr: badgeBdr } = resolveIconColors(file.type, file.name);
+  document.getElementById('fp-meta').innerHTML = `
+    <span class="fp-badge text-[9px]" style="color:${badgeCol};background:${badgeBg};border:1px solid ${badgeBdr};">${fileTypeName(file.type, file.name)}</span>
+    ${file.size ? `<span class="text-[10px] text-outline">${file.size}</span><span class="text-outline/30 text-[10px]">·</span>` : ''}
+    <span class="text-[10px] text-outline hidden sm:inline">${fmtDate(file.modified)}</span>
+  `;
+  document.getElementById('fp-actions').innerHTML = '';
+  const acts = document.getElementById('fp-actions');
+
+  const dlA = document.createElement('a');
+  dlA.className = 'fp-btn fp-btn-dl';
+  dlA.href = '/api/download?path=' + encodeURIComponent(file.path);
+  dlA.innerHTML = `<span class="material-symbols-outlined text-[13px]">download</span><span class="hidden sm:inline">Download</span>`;
+  acts.appendChild(dlA);
+
+  const delBtn = document.createElement('button');
+  delBtn.className = 'fp-btn fp-btn-del';
+  delBtn.innerHTML = `<span class="material-symbols-outlined text-[13px]">delete</span><span class="hidden sm:inline">Trash</span>`;
+  delBtn.onclick = async () => {
+    if (!confirm(`Move "${file.name}" to Trash?`)) return;
+    // Close this tab
+    const idx2 = openTabs.findIndex(t => t.data.path === file.path && t.tabType === 'file');
+    if (idx2 !== -1) openTabs.splice(idx2, 1);
+    activeTabIdx = Math.min(activeTabIdx, openTabs.length - 1);
+    renderSidebarTabs();
+    fileViewerBack();
+    await moveToTrash(file);
+  };
+  acts.appendChild(delBtn);
+
+  const backBtn = document.createElement('button');
+  backBtn.className = 'fp-btn fp-btn-back';
+  backBtn.innerHTML = `<span class="material-symbols-outlined text-[13px]">arrow_back</span>Back`;
+  backBtn.onclick = fileViewerBack;
+  acts.appendChild(backBtn);
+
+  // Render content area
+  renderPreviewContent(file);
+
+  showView('file-preview');
+}
+
+async function renderPreviewContent(file) {
+  const inner = document.getElementById('fp-content-inner');
+  const ptype = resolvePreviewType(file.name);
+  const previewUrl = '/api/preview?path=' + encodeURIComponent(file.path);
+
+  // Show loading
+  inner.className = 'fp-content-inner fp-center';
+  inner.innerHTML = `<div class="fp-placeholder"><div class="fp-placeholder-icon-wrap"><span class="material-symbols-outlined text-3xl text-outline/30 spin-icon">refresh</span></div><p class="text-outline text-xs">Loading…</p></div>`;
+
+  try {
+    if (ptype === 'image') {
+      inner.className = 'fp-content-inner fp-center';
+      inner.innerHTML = `<img class="fp-img" src="${previewUrl}" alt="${file.name}" style="padding:12px;" onerror="this.onerror=null;this.src='';this.parentElement.innerHTML='<p class=\\'text-outline text-xs\\'>Failed to load image</p>'"/>`;
+      inner.querySelector('img').addEventListener('click', () => openLightbox(previewUrl));
+
+    } else if (ptype === 'video') {
+      inner.className = 'fp-content-inner fp-center';
+      inner.innerHTML = `<video class="fp-video" controls preload="metadata" style="max-width:100%;max-height:100%;"><source src="${previewUrl}"/><p class="text-outline text-xs p-4">Your browser doesn't support this video format.</p></video>`;
+
+    } else if (ptype === 'audio') {
+      inner.className = 'fp-content-inner fp-center';
+      const wbars = Array.from({length:12},(_,i)=>`<div class="fp-audio-wave-bar" style="height:${8+Math.random()*16}px;animation-delay:${i*0.08}s"></div>`).join('');
+      inner.innerHTML = `
+        <div class="fp-audio-wrap">
+          <div class="fp-audio-art">
+            <span class="material-symbols-outlined text-4xl" style="color:#00eefc;">audio_file</span>
+          </div>
+          <p class="font-bold text-sm text-on-surface text-center" style="font-family:Montserrat;max-width:280px;word-break:break-all;">${file.name}</p>
+          <div class="fp-audio-waves">${wbars}</div>
+          <audio controls preload="metadata"><source src="${previewUrl}"/></audio>
+        </div>`;
+
+    } else if (ptype === 'pdf') {
+      inner.className = 'fp-content-inner';
+      inner.style.height = '100%';
+      inner.innerHTML = `<iframe class="fp-pdf" src="${previewUrl}" title="${file.name}"></iframe>`;
+
+    } else if (ptype === 'csv') {
+      const resp = await fetch(previewUrl + '&raw=1');
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const text = await resp.text();
+      inner.className = 'fp-content-inner';
+      inner.innerHTML = buildCsvPreview(text);
+
+    } else if (ptype === 'json') {
+      const resp = await fetch(previewUrl + '&raw=1');
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const text = await resp.text();
+      inner.className = 'fp-content-inner';
+      try {
+        const pretty = JSON.stringify(JSON.parse(text), null, 2);
+        inner.innerHTML = buildCodePreview(pretty, 'json', file.name);
+      } catch {
+        inner.innerHTML = buildCodePreview(text, 'json', file.name);
+      }
+      applyHighlightJs(inner);
+
+    } else if (ptype === 'code') {
+      const resp = await fetch(previewUrl + '&raw=1');
+      if (resp.status === 413) {
+        inner.className = 'fp-content-inner fp-center';
+        inner.innerHTML = buildPlaceholder(file, '#9d8ba0', 'File too large to preview (over 5 MB). Download to view.');
+        return;
+      }
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const text = await resp.text();
+      inner.className = 'fp-content-inner';
+      inner.innerHTML = buildCodePreview(text, hlLang(file.name), file.name);
+      applyHighlightJs(inner);
+
+    } else {
+      // Unsupported — placeholder
+      inner.className = 'fp-content-inner fp-center';
+      inner.innerHTML = buildPlaceholder(file, resolveIconColors(file.type, file.name).col, 'Preview not available for this file type.');
+    }
+  } catch(e) {
+    inner.className = 'fp-content-inner fp-center';
+    inner.innerHTML = buildPlaceholder(file, '#ffb4ab', 'Could not load preview: ' + e.message);
+  }
+}
+
+function buildCodePreview(text, lang, name) {
+  const lines = text.split('\n');
+  // Limit to 2000 lines for performance
+  const truncated = lines.length > 2000;
+  const displayLines = truncated ? lines.slice(0, 2000) : lines;
+  const lnHtml = displayLines.map((l, i) =>
+    `<span class="ln">${i+1}</span>${escHtml(l)}`
+  ).join('\n');
+  return `<div class="fp-code-wrap"><pre class="fp-code-block hljs" data-lang="${lang}"><code>${lnHtml}</code></pre>${truncated ? `<p class="fp-csv-notice">Showing first 2,000 of ${lines.length.toLocaleString()} lines</p>` : ''}</div>`;
+}
+
+function buildCsvPreview(text) {
+  const rows = text.trim().split('\n').map(r => r.split(','));
+  const truncated = rows.length > 501;
+  const display = truncated ? rows.slice(0, 501) : rows;
+  const [header, ...body] = display;
+  const thHtml = (header || []).map(c => `<th>${escHtml(c.replace(/^"|"$/g,''))}</th>`).join('');
+  const trHtml = body.map(r =>
+    `<tr>${(r).map(c => `<td title="${escHtml(c)}">${escHtml(c.replace(/^"|"$/g,'').slice(0,80))}</td>`).join('')}</tr>`
+  ).join('');
+  return `<div class="fp-csv-wrap"><table class="fp-csv-table"><thead><tr>${thHtml}</tr></thead><tbody>${trHtml}</tbody></table>${truncated ? `<p class="fp-csv-notice">Showing first 500 rows of ${(rows.length-1).toLocaleString()} total</p>` : ''}</div>`;
+}
+
+function buildPlaceholder(file, col, msg) {
+  const iconName = fileIcon(file.type, file.name);
+  const dlUrl = '/api/download?path=' + encodeURIComponent(file.path);
+  return `
+    <div class="fp-placeholder">
+      <div class="fp-placeholder-icon-wrap" style="border-color:rgba(255,255,255,0.1);">
+        <span class="material-symbols-outlined text-4xl" style="color:${col};opacity:0.6;">${iconName}</span>
+      </div>
+      <p class="text-outline text-xs max-w-xs">${msg}</p>
+      <a href="${dlUrl}" class="fp-btn fp-btn-dl mt-2">
+        <span class="material-symbols-outlined text-[14px]">download</span> Download
+      </a>
+    </div>`;
+}
+
+function escHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Lazy-load highlight.js and apply
+function applyHighlightJs(container) {
+  const block = container.querySelector('[data-lang]');
+  if (!block) return;
+  const lang = block.dataset.lang || 'plaintext';
+
+  const doHighlight = () => {
+    if (window.hljs) {
+      try {
+        const code = block.querySelector('code');
+        if (code) {
+          // Re-extract raw text (strip line number spans)
+          const rawText = code.innerText; // preserves newlines, strips HTML
+          // hljs highlight
+          const result = window.hljs.highlight(rawText, { language: lang, ignoreIllegals: true });
+          code.innerHTML = result.value
+            .split('\n')
+            .map((l, i) => `<span class="ln">${i+1}</span>${l}`)
+            .join('\n');
+        }
+      } catch {}
+    }
+  };
+
+  if (!hlJsLoaded) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css';
+    document.head.appendChild(link);
+
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js';
+    s.onload = () => { hlJsLoaded = true; doHighlight(); };
+    document.head.appendChild(s);
+  } else {
+    doHighlight();
+  }
+}
+
+// Lightbox
+function openLightbox(src) {
+  document.getElementById('fp-lightbox-img').src = src;
+  document.getElementById('fp-lightbox').classList.add('open');
+  document.addEventListener('keydown', closeLightboxOnEsc);
+}
+function closeLightbox(e) {
+  if (e && e.target && e.target.id === 'fp-lightbox-img') return; // click on image itself — don't close
+  document.getElementById('fp-lightbox').classList.remove('open');
+  document.removeEventListener('keydown', closeLightboxOnEsc);
+}
+function closeLightboxOnEsc(e) { if (e.key === 'Escape') closeLightbox(); }
+
+function fileViewerBack() {
+  if (fpSource === 'folder') showView('folder');
+  else if (fpSource === 'home') showView('home');
+  else { showView('files'); highlightNav('nav-files'); }
+}
+
+// Update renderSidebarTabs to handle file tabs too
+function openFileTab(file, source) {
+  fpSource = source || 'files';
+  // Check for existing file tab
+  const existing = openTabs.findIndex(t => t.tabType === 'file' && t.data.path === file.path);
+  if (existing !== -1) { switchToTab(existing); return; }
+  openTabs.push({ data: file, tabType: 'file' });
+  activeTabIdx = openTabs.length - 1;
+  renderSidebarTabs();
+  openFileViewer(file, source);
+  highlightNav('');
+}
+
+// ═══════════════════════════════════
+// SEARCH (root files only, no trash, no logs)
+// ═══════════════════════════════════
+const filterTypes = ['all','folder','file'];
+const filterLabels = { all:'ALL TYPES', folder:'Folders', file:'Files' };
+
+function buildFilterDropdown() {
+  const dd = document.getElementById('filter-dropdown');
+  dd.innerHTML = '';
+  filterTypes.forEach(t => {
+    const item = document.createElement('button');
+    item.className = 'w-full text-left px-3 py-1.5 text-[11px] font-bold transition-colors hover:bg-surface-variant/50 ' + (t === activeFilter ? 'text-primary' : 'text-on-surface-variant');
+    item.textContent = filterLabels[t];
+    item.onclick = () => { activeFilter = t; document.getElementById('filter-label').textContent = filterLabels[t]; toggleFilter(); applyFilters(); };
+    dd.appendChild(item);
+  });
+}
+
+function toggleFilter() {
+  const dd = document.getElementById('filter-dropdown');
+  dd.classList.toggle('hidden');
+  buildFilterDropdown();
+}
+
+function applyFilters() {
+  // SEARCH ONLY INDEXES ROOT FILES (driveFiles from /api/files with no path)
+  const filtered = activeFilter === 'all' ? driveFiles : driveFiles.filter(f => f.type === activeFilter);
+  renderFilesTable('files-table-body-2', filtered);
+  const countEl = document.getElementById('files-table-count');
+  if (countEl) countEl.textContent = filtered.length + ' item' + (filtered.length !== 1 ? 's' : '');
+}
+
+function handleSearch(query) {
+  const clearBtn = document.getElementById('search-clear');
+  const sd = document.getElementById('search-dropdown');
+  const list = document.getElementById('search-results-list');
+
+  clearBtn.classList.toggle('hidden', !query);
+
+  if (!query.trim()) { sd.classList.add('hidden'); applyFilters(); return; }
+
+  const q = query.toLowerCase();
+  // ONLY SEARCH ROOT FILES — driveFiles (already root-only from API call)
+  const matches = driveFiles.filter(f => f.name.toLowerCase().includes(q)).slice(0, 12);
+
+  list.innerHTML = '';
+  if (matches.length === 0) {
+    list.innerHTML = '<p class="px-4 py-3 text-[11px] text-outline italic">No files found in root</p>';
+  } else {
+    matches.forEach(f => {
+      const row = document.createElement('div');
+      row.className = 'flex items-center gap-3 px-4 py-2 cursor-pointer hover:bg-surface-variant/40 transition-colors border-b border-outline-variant/10';
+      row.innerHTML = `
+        <span class="material-symbols-outlined text-sm ${fileIconColor(f.type, f.name)} shrink-0">${fileIcon(f.type, f.name)}</span>
+        <div class="flex-1 min-w-0">
+          <p class="text-[11px] font-bold text-on-surface truncate">${highlight(f.name, q)}</p>
+          <p class="text-[9px] text-outline">${fileTypeName(f.type, f.name)} · ${f.size || '—'}</p>
+        </div>
+        <span class="text-[10px] text-outline shrink-0">${f.size || ''}</span>
+      `;
+      row.addEventListener('click', () => {
+        sd.classList.add('hidden');
+        document.getElementById('files-search-input').value = '';
+        clearBtn.classList.add('hidden');
+        if (f.type === 'folder') openFolderTab(f);
+        else openFileTab(f, 'files');
+      });
+      list.appendChild(row);
+    });
+  }
+  sd.classList.remove('hidden');
+}
+
+function highlight(name, q) {
+  const i = name.toLowerCase().indexOf(q);
+  if (i === -1) return name;
+  return name.slice(0, i) + `<span style="color:#ecb2ff;background:rgba(236,178,255,0.12);border-radius:2px;padding:0 1px">${name.slice(i, i + q.length)}</span>` + name.slice(i + q.length);
+}
+
+function clearSearch() {
+  document.getElementById('files-search-input').value = '';
+  document.getElementById('search-clear').classList.add('hidden');
+  document.getElementById('search-dropdown').classList.add('hidden');
+  applyFilters();
+}
+
+// ═══════════════════════════════════
+// UPLOAD
+// ═══════════════════════════════════
+async function uploadFiles(fileList, folder) {
+  if (!fileList || fileList.length === 0) return;
+  dzSetUploading(true);
+
+  const formData = new FormData();
+  for (const f of fileList) formData.append('files', f);
+
+  const url = '/api/upload' + (folder ? '?folder=' + encodeURIComponent(folder) : '');
+  try {
+    const res = await fetch(url, { method: 'POST', body: formData });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Upload failed');
+    dzShowSuccess();
+    // Refresh everything — files, counts, donut, recent, AND log badge
+    await refreshAll();
+    showToast(`${data.uploaded.length} file(s) uploaded`, 'success');
+  } catch(e) {
+    dzResetState();
+    showToast('Upload failed: ' + e.message, 'error');
+  }
+}
+
+function handleFileInputChange(input) {
+  if (input.files.length) uploadFiles(input.files);
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').style.borderColor = '';
+  if (e.dataTransfer.files.length) uploadFiles(e.dataTransfer.files);
+}
+
+// ── Drop zone UI ──
+function dzSetUploading(active) {
+  const dz    = document.getElementById('drop-zone');
+  const field = document.getElementById('dz-field');
+  const title = document.getElementById('dz-title');
+  const sub   = document.getElementById('dz-subtitle');
+  const btn   = document.getElementById('dz-btn');
+  const icon  = document.getElementById('dz-icon');
+
+  if (active) {
+    dz.classList.add('dz-uploading');
+    field.style.cssText = 'position:absolute;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:center;';
+    title.textContent = 'Uploading…';
+    sub.textContent   = 'Stay on this page. Files are being uploaded.';
+    btn.textContent   = 'Cancel';
+    btn.onclick       = () => { dzResetState(); };
+    icon.textContent  = 'sync';
+    icon.style.animation = 'spin 1.5s linear infinite';
+  } else {
+    dz.classList.remove('dz-uploading');
+    field.style.cssText = 'display:none!important';
+    title.innerHTML  = 'Drag &amp; Drop Files Here';
+    sub.textContent  = 'Upload files instantly to ' + (serverInfo.volumeLabel || 'VoltDrive') + '.';
+    btn.textContent  = 'Select Files';
+    btn.onclick      = () => document.getElementById('file-input').click();
+    icon.textContent = 'cloud_upload';
+    icon.style.animation = '';
+  }
+}
+
+function dzShowSuccess() {
+  const dz      = document.getElementById('drop-zone');
+  const icon    = document.getElementById('dz-icon');
+  var tickSvg   = document.getElementById('dz-tick-svg');
+  const title   = document.getElementById('dz-title');
+  const sub     = document.getElementById('dz-subtitle');
+  const btn     = document.getElementById('dz-btn');
+  const wrap    = document.getElementById('dz-icon-wrap');
+
+  dz.classList.remove('dz-uploading');
+  dz.classList.add('dz-success');
+  document.getElementById('dz-field').style.cssText = 'display:none!important';
+
+  icon.style.display = 'none';
+  var freshTick = tickSvg.cloneNode(true);
+  tickSvg.parentNode.replaceChild(freshTick, tickSvg);
+  freshTick.style.display = 'block';
+  wrap.style.borderColor = 'rgba(80,220,100,0.8)';
+  wrap.style.background  = 'rgba(80,220,100,0.12)';
+  wrap.style.boxShadow   = '0 0 28px rgba(80,220,100,0.5),0 0 56px rgba(80,220,100,0.2)';
+
+  dz.style.borderColor = 'rgba(80,220,100,0.55)';
+  title.innerHTML  = '<span style="color:#50dc64;font-weight:800">Upload Complete!</span>';
+  sub.textContent  = 'Check All Files to find your new files.';
+  btn.textContent  = 'Done';
+  btn.style.borderColor = 'rgba(80,220,100,0.5)';
+  btn.style.color       = '#50dc64';
+  btn.onclick = () => dzResetState();
+
+  setTimeout(() => dzResetState(), 3000);
+}
+
+function dzResetState() {
+  const dz  = document.getElementById('drop-zone');
+  const icon = document.getElementById('dz-icon');
+  const tickSvg = document.getElementById('dz-tick-svg');
+  const btn = document.getElementById('dz-btn');
+  const wrap = document.getElementById('dz-icon-wrap');
+
+  dz.classList.remove('dz-uploading','dz-success');
+  dz.style.borderColor = '';
+  icon.style.display = '';
+  if (tickSvg) tickSvg.style.display = 'none';
+  wrap.style.cssText = '';
+  btn.style.borderColor = '';
+  btn.style.color = '';
+  btn.onclick = () => document.getElementById('file-input').click();
+  dzSetUploading(false);
+}
+
+// ═══════════════════════════════════
+// TRANSFER BANNER
+// ═══════════════════════════════════
+const banner = document.getElementById('transfer-banner');
+const bar    = document.getElementById('transfer-bar');
+const pctEl  = document.getElementById('transfer-pct');
+const etaEl  = document.getElementById('transfer-eta');
+
+function startTransfer(label, durationMs, completeText, onComplete) {
+  if (bannerVisible) return;
+  bannerVisible = true; transferPct = 0;
+  const labelEl = document.getElementById('transfer-label');
+  if (labelEl) labelEl.textContent = label || 'Working…';
+  banner.style.display = 'block';
+  banner.classList.remove('hiding');
+  document.getElementById('main-content').style.paddingTop = '80px';
+
+  const totalMs = durationMs || 4000;
+  const tick = 80, step = (tick / totalMs) * 100;
+  transferInterval = setInterval(() => {
+    transferPct = Math.min(100, transferPct + step + Math.random() * step * 0.4);
+    const pct = Math.round(transferPct);
+    bar.style.width = pct + '%';
+    pctEl.textContent = pct + '%';
+    const s = Math.max(0, Math.round(((100 - pct) / 100) * (totalMs / 1000)));
+    etaEl.textContent = s > 0 ? `Est. ${s}s remaining` : 'Finalizing…';
+    if (transferPct >= 100) {
+      clearInterval(transferInterval);
+      pctEl.textContent = '100%';
+      etaEl.textContent = completeText || 'Complete ✓';
+      pctEl.style.color = '#94db00';
+      if (onComplete) onComplete();
+      setTimeout(dismissBanner, 1400);
+    }
+  }, tick);
+}
+
+function startAction(label, ms, text, cb) { startTransfer(label, ms, text, cb); }
+function cancelTransfer() { if(transferInterval) clearInterval(transferInterval); dismissBanner(); }
+function dismissBanner() {
+  banner.classList.add('hiding');
+  setTimeout(() => {
+    banner.style.display = 'none'; banner.classList.remove('hiding');
+    document.getElementById('main-content').style.paddingTop = '';
+    bannerVisible = false; transferPct = 0; bar.style.width = '0%'; pctEl.style.color = '';
+  }, 400);
+}
+
+// ═══════════════════════════════════
+// SETTINGS DROPDOWN
+// ═══════════════════════════════════
+function toggleSettingsDropdown() {
+  document.getElementById('settings-dropdown').classList.toggle('hidden');
+}
+function closeSettingsAndRun(fn) {
+  document.getElementById('settings-dropdown').classList.add('hidden');
+  setTimeout(fn, 80);
+}
+
+// ═══════════════════════════════════
+// ═══════════════════════════════════
+// RECENT FILES
+// ═══════════════════════════════════
+const RECENT_KEY = 'voltdrive_recent_v1';
+const RECENT_MAX = 10;
+
+function loadRecentFromStorage() {
+  try {
+    const raw = localStorage.getItem(RECENT_KEY);
+    recentItems = raw ? JSON.parse(raw) : [];
+  } catch { recentItems = []; }
+  renderRecentFiles();
+  const badge = document.getElementById('recent-count-badge');
+  if (badge) badge.textContent = recentItems.length;
+}
+
+function saveRecentToStorage() {
+  try { localStorage.setItem(RECENT_KEY, JSON.stringify(recentItems)); } catch {}
+  // Update sidebar badge
+  const badge = document.getElementById('recent-count-badge');
+  if (badge) badge.textContent = recentItems.length;
+}
+
+// Called after each loadFiles() — merges new items in, keeps top 10 by modified date
+function trackRecent(items) {
+  if (!items || !items.length) return;
+
+  // Build a map of existing recent by path for quick dedup
+  const existing = {};
+  recentItems.forEach(r => { existing[r.path] = true; });
+
+  // Merge all incoming items (upsert by path)
+  items.forEach(item => {
+    const idx = recentItems.findIndex(r => r.path === item.path);
+    if (idx !== -1) {
+      // Update in place (modified date may have changed)
+      recentItems[idx] = { ...item };
+    } else {
+      recentItems.push({ ...item });
+    }
+  });
+
+  // Sort by modified descending, keep top RECENT_MAX
+  recentItems.sort((a, b) => new Date(b.modified) - new Date(a.modified));
+  recentItems = recentItems.slice(0, RECENT_MAX);
+
+  saveRecentToStorage();
+  renderRecentFiles();
+}
+
+// Remove a specific file/folder from recents by name (called on delete/trash)
+function pruneRecent(name) {
+  const before = recentItems.length;
+  recentItems = recentItems.filter(r => r.name !== name);
+  if (recentItems.length !== before) {
+    saveRecentToStorage();
+    renderRecentFiles();
+  }
+}
+
+function clearRecent() {
+  recentItems = [];
+  saveRecentToStorage();
+  renderRecentFiles();
+  showToast('Recent history cleared', 'info');
+}
+
+// ═══════════════════════════════════
+// RECENT FILES — card strip (from reference UI)
+// ═══════════════════════════════════
+const iconColorHex = {
+  folder:  '#f4c542', video:   '#ecb2ff', image:   '#00eefc', audio:   '#00eefc',
+  doc:     '#ecb2ff', code:    '#94db00', archive: '#94db00', binary:  '#9d8ba0'
+};
+const iconBgHex = {
+  folder:  'rgba(244,197,66,0.12)', video:   'rgba(236,178,255,0.12)', image:   'rgba(0,238,252,0.10)',
+  audio:   'rgba(0,238,252,0.10)',   doc:     'rgba(236,178,255,0.10)', code:    'rgba(148,219,0,0.10)',
+  archive: 'rgba(148,219,0,0.10)',   binary:  'rgba(157,139,160,0.08)'
+};
+const iconBorderHex = {
+  folder:  'rgba(244,197,66,0.28)', video:   'rgba(236,178,255,0.30)', image:   'rgba(0,238,252,0.25)',
+  audio:   'rgba(0,238,252,0.25)',   doc:     'rgba(236,178,255,0.25)', code:    'rgba(148,219,0,0.25)',
+  archive: 'rgba(148,219,0,0.25)',   binary:  'rgba(157,139,160,0.18)'
+};
+
+// Resolve icon colours from filename extension — works regardless of what type the server sends
+function resolveIconColors(type, name) {
+  if (type === 'folder') return {
+    col: '#f4c542',
+    bg:  'rgba(244,197,66,0.12)',
+    bdr: 'rgba(244,197,66,0.28)',
+  };
+  const ext = (name || '').split('.').pop().toLowerCase();
+  const map = {
+    // video — purple
+    mp4:  { col:'#ecb2ff', bg:'rgba(236,178,255,0.12)', bdr:'rgba(236,178,255,0.30)' },
+    mov:  { col:'#ecb2ff', bg:'rgba(236,178,255,0.12)', bdr:'rgba(236,178,255,0.30)' },
+    avi:  { col:'#ecb2ff', bg:'rgba(236,178,255,0.12)', bdr:'rgba(236,178,255,0.30)' },
+    mkv:  { col:'#ecb2ff', bg:'rgba(236,178,255,0.12)', bdr:'rgba(236,178,255,0.30)' },
+    webm: { col:'#ecb2ff', bg:'rgba(236,178,255,0.12)', bdr:'rgba(236,178,255,0.30)' },
+    // image — cyan
+    jpg:  { col:'#00eefc', bg:'rgba(0,238,252,0.10)', bdr:'rgba(0,238,252,0.25)' },
+    jpeg: { col:'#00eefc', bg:'rgba(0,238,252,0.10)', bdr:'rgba(0,238,252,0.25)' },
+    png:  { col:'#00eefc', bg:'rgba(0,238,252,0.10)', bdr:'rgba(0,238,252,0.25)' },
+    gif:  { col:'#00eefc', bg:'rgba(0,238,252,0.10)', bdr:'rgba(0,238,252,0.25)' },
+    webp: { col:'#00eefc', bg:'rgba(0,238,252,0.10)', bdr:'rgba(0,238,252,0.25)' },
+    svg:  { col:'#00eefc', bg:'rgba(0,238,252,0.10)', bdr:'rgba(0,238,252,0.25)' },
+    heic: { col:'#00eefc', bg:'rgba(0,238,252,0.10)', bdr:'rgba(0,238,252,0.25)' },
+    bmp:  { col:'#00eefc', bg:'rgba(0,238,252,0.10)', bdr:'rgba(0,238,252,0.25)' },
+    // audio — cyan
+    mp3:  { col:'#00eefc', bg:'rgba(0,238,252,0.10)', bdr:'rgba(0,238,252,0.25)' },
+    wav:  { col:'#00eefc', bg:'rgba(0,238,252,0.10)', bdr:'rgba(0,238,252,0.25)' },
+    flac: { col:'#00eefc', bg:'rgba(0,238,252,0.10)', bdr:'rgba(0,238,252,0.25)' },
+    aac:  { col:'#00eefc', bg:'rgba(0,238,252,0.10)', bdr:'rgba(0,238,252,0.25)' },
+    ogg:  { col:'#00eefc', bg:'rgba(0,238,252,0.10)', bdr:'rgba(0,238,252,0.25)' },
+    // docs — purple
+    pdf:  { col:'#ffb4ab', bg:'rgba(255,180,171,0.10)', bdr:'rgba(255,180,171,0.28)' },
+    doc:  { col:'#ecb2ff', bg:'rgba(236,178,255,0.10)', bdr:'rgba(236,178,255,0.25)' },
+    docx: { col:'#ecb2ff', bg:'rgba(236,178,255,0.10)', bdr:'rgba(236,178,255,0.25)' },
+    txt:  { col:'#ecb2ff', bg:'rgba(236,178,255,0.10)', bdr:'rgba(236,178,255,0.25)' },
+    md:   { col:'#ecb2ff', bg:'rgba(236,178,255,0.10)', bdr:'rgba(236,178,255,0.25)' },
+    odt:  { col:'#ecb2ff', bg:'rgba(236,178,255,0.10)', bdr:'rgba(236,178,255,0.25)' },
+    rtf:  { col:'#ecb2ff', bg:'rgba(236,178,255,0.10)', bdr:'rgba(236,178,255,0.25)' },
+    // spreadsheets — green
+    xlsx: { col:'#94db00', bg:'rgba(148,219,0,0.10)', bdr:'rgba(148,219,0,0.25)' },
+    xls:  { col:'#94db00', bg:'rgba(148,219,0,0.10)', bdr:'rgba(148,219,0,0.25)' },
+    csv:  { col:'#94db00', bg:'rgba(148,219,0,0.10)', bdr:'rgba(148,219,0,0.25)' },
+    // code — green
+    js:   { col:'#94db00', bg:'rgba(148,219,0,0.10)', bdr:'rgba(148,219,0,0.25)' },
+    ts:   { col:'#94db00', bg:'rgba(148,219,0,0.10)', bdr:'rgba(148,219,0,0.25)' },
+    py:   { col:'#94db00', bg:'rgba(148,219,0,0.10)', bdr:'rgba(148,219,0,0.25)' },
+    html: { col:'#94db00', bg:'rgba(148,219,0,0.10)', bdr:'rgba(148,219,0,0.25)' },
+    css:  { col:'#94db00', bg:'rgba(148,219,0,0.10)', bdr:'rgba(148,219,0,0.25)' },
+    json: { col:'#94db00', bg:'rgba(148,219,0,0.10)', bdr:'rgba(148,219,0,0.25)' },
+    xml:  { col:'#94db00', bg:'rgba(148,219,0,0.10)', bdr:'rgba(148,219,0,0.25)' },
+    sh:   { col:'#94db00', bg:'rgba(148,219,0,0.10)', bdr:'rgba(148,219,0,0.25)' },
+    php:  { col:'#94db00', bg:'rgba(148,219,0,0.10)', bdr:'rgba(148,219,0,0.25)' },
+    // archives — green
+    zip:  { col:'#94db00', bg:'rgba(148,219,0,0.10)', bdr:'rgba(148,219,0,0.25)' },
+    rar:  { col:'#94db00', bg:'rgba(148,219,0,0.10)', bdr:'rgba(148,219,0,0.25)' },
+    tar:  { col:'#94db00', bg:'rgba(148,219,0,0.10)', bdr:'rgba(148,219,0,0.25)' },
+    gz:   { col:'#94db00', bg:'rgba(148,219,0,0.10)', bdr:'rgba(148,219,0,0.25)' },
+    '7z': { col:'#94db00', bg:'rgba(148,219,0,0.10)', bdr:'rgba(148,219,0,0.25)' },
+    // executables — grey
+    exe:  { col:'#9d8ba0', bg:'rgba(157,139,160,0.08)', bdr:'rgba(157,139,160,0.18)' },
+    msi:  { col:'#9d8ba0', bg:'rgba(157,139,160,0.08)', bdr:'rgba(157,139,160,0.18)' },
+    dmg:  { col:'#9d8ba0', bg:'rgba(157,139,160,0.08)', bdr:'rgba(157,139,160,0.18)' },
+    bin:  { col:'#9d8ba0', bg:'rgba(157,139,160,0.08)', bdr:'rgba(157,139,160,0.18)' },
+  };
+  return map[ext] || { col:'#9d8ba0', bg:'rgba(157,139,160,0.08)', bdr:'rgba(157,139,160,0.18)' };
+}
+
+function fmtBytes(bytes) {
+  if (!bytes || bytes <= 0) return '—';
+  const gb = bytes / (1024 ** 3);
+  if (gb >= 1) return gb.toFixed(1) + ' GB';
+  const mb = bytes / (1024 ** 2);
+  if (mb >= 1) return mb.toFixed(0) + ' MB';
+  return Math.round(bytes / 1024) + ' KB';
+}
+
+function renderRecentFiles() {
+  const strip = document.getElementById('recent-files-strip');
+  if (!strip) return;
+  strip.innerHTML = '';
+
+  if (!recentItems || !recentItems.length) {
+    strip.innerHTML = `
+      <div class="flex flex-col items-center justify-center py-10 gap-2 text-outline w-full">
+        <span class="material-symbols-outlined text-2xl opacity-30">history</span>
+        <p class="text-[10px] italic opacity-50">No recent files yet</p>
+      </div>`;
+    return;
+  }
+
+  recentItems.forEach(f => {
+    const card = document.createElement('div');
+    card.className = 'snap-start shrink-0 glass-card rounded border border-outline-variant/50 hover:border-primary/40 transition-colors cursor-pointer overflow-hidden';
+    card.style.cssText = 'min-width:160px;max-width:200px;width:160px;';
+
+    const canBrowse = f.type === 'folder' || f.type === 'archive';
+    const { col, bg: colBg, bdr: colBdr } = resolveIconColors(f.type, f.name);
+    const iconName = fileIcon(f.type, f.name);
+    const sizeStr = f.size && f.size !== '--' ? f.size : '—';
+    const agoStr  = f.ago || (f.modified ? fmtDate(f.modified) : '');
+
+    card.innerHTML = `
+      <div class="flex items-center justify-between px-2.5 pt-2.5 pb-1 gap-2">
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+             style="background:${colBg};border:1px solid ${colBdr};box-shadow:0 0 8px ${colBg};">
+          <span class="material-symbols-outlined text-sm" style="color:${col};">${iconName}</span>
+        </div>
+        <button class="recent-del w-6 h-6 rounded flex items-center justify-center border border-transparent text-outline hover:text-error hover:bg-error/10 hover:border-error/30 transition-all shrink-0" title="Move to Trash">
+          <span class="material-symbols-outlined text-[13px]">delete</span>
+        </button>
+      </div>
+      <div class="px-2.5 pb-1">
+        <p class="text-[10px] font-bold text-on-surface leading-snug" style="word-break:break-all;">${f.name}</p>
+        <p class="text-[9px] mt-0.5" style="color:#9d8ba0;">${sizeStr !== '—' ? sizeStr + ' · ' : ''}${agoStr}</p>
+      </div>
+      <div class="px-2.5 pb-2.5">
+        <span class="text-[9px] font-bold" style="color:${col};opacity:0.7;">${canBrowse ? '⌘ Browse' : '⌘ Open'}</span>
+      </div>
+    `;
+
+    card.addEventListener('click', e => {
+      if (e.target.closest('.recent-del')) return;
+      if (canBrowse) openFolderTab(f);
+      else openFileTab(f, 'home');
+    });
+
+    card.querySelector('.recent-del').addEventListener('click', e => {
+      e.stopPropagation();
+      moveToTrash(f);
+      card.style.transition = 'opacity 0.2s, transform 0.2s';
+      card.style.opacity = '0';
+      card.style.transform = 'scale(0.92)';
+      setTimeout(() => { card.remove(); }, 210);
+    });
+
+    strip.appendChild(card);
+  });
+}
+
+// TOAST NOTIFICATIONS
+// ═══════════════════════════════════
+let toastTimer = null;
+function showToast(msg, type) {
+  let toast = document.getElementById('global-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'global-toast';
+    toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:500;padding:8px 18px;border-radius:8px;font-size:12px;font-weight:700;font-family:Montserrat,sans-serif;letter-spacing:0.04em;pointer-events:none;transition:opacity 0.3s;max-width:90vw;text-align:center;backdrop-filter:blur(12px);';
+    document.body.appendChild(toast);
+  }
+  const colors = { success:'background:rgba(148,219,0,0.2);border:1px solid rgba(148,219,0,0.4);color:#94db00;', error:'background:rgba(255,180,171,0.2);border:1px solid rgba(255,180,171,0.4);color:#ffb4ab;', info:'background:rgba(0,238,252,0.15);border:1px solid rgba(0,238,252,0.3);color:#00eefc;' };
+  toast.style.cssText += colors[type] || colors.info;
+  toast.textContent = msg;
+  toast.style.opacity = '1';
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toast.style.opacity = '0'; }, 2500);
+}
+
+// ═══════════════════════════════════
+// EJECT
+// ═══════════════════════════════════
+function ejectDevice() {
+  if (confirm('Safely eject ' + (serverInfo.volumeLabel || 'VoltDrive') + '? The server will remain running.')) {
+    showToast('Device ejected safely ✓', 'success');
+  }
+}
+
+// ═══════════════════════════════════
+// CLICK OUTSIDE HANDLERS
+// ═══════════════════════════════════
+document.addEventListener('click', e => {
+  const sw = document.getElementById('settings-wrapper');
+  const sd = document.getElementById('settings-dropdown');
+  if (sw && sd && !sw.contains(e.target)) sd.classList.add('hidden');
+
+  const fb = document.getElementById('filter-btn');
+  const fd = document.getElementById('filter-dropdown');
+  if (fb && fd && !fb.contains(e.target) && !fd.contains(e.target)) fd.classList.add('hidden');
+
+  const si = document.getElementById('files-search-input');
+  const sdd = document.getElementById('search-dropdown');
+  if (si && sdd && !si.contains(e.target) && !sdd.contains(e.target)) sdd.classList.add('hidden');
+});
+
+// ═══════════════════════════════════
+// INIT
+// ═══════════════════════════════════
+window.addEventListener('load', async () => {
+  showView('home');
+  highlightNav('nav-home');
+  renderSidebarTabs();
+  loadRecentFromStorage();   // hydrate recentItems from localStorage
+  await loadServerInfo();
+  // Pre-load files count for vitality even on home
+  try {
+    const res = await fetch('/api/files');
+    const data = await res.json();
+    driveFiles = data.items || [];
+    // Merge real drive capacity from serverInfo into vitality data
+    updateVitality({ ...data, capacityBytes: serverInfo.capacityBytes });
+    trackRecent(driveFiles);  // seed recent from root listing
+  } catch {}
+  // Pre-load trash badge
+  try {
+    const r = await fetch('/api/trash');
+    const d = await r.json();
+    trashItems = d.items || [];
+    updateTrashBadge();
+  } catch {}
+  // Load log badge immediately on startup
+  await syncLogs();
+
+  // Connect to real-time SSE stream after initial load
+  startSSE();
+});
+
+// ═══════════════════════════════════
+// REAL-TIME — Server-Sent Events client
+// Server pushes 'change' events instantly when files are mutated.
+// All connected browsers (PC, phone, tablet) update simultaneously.
+// ═══════════════════════════════════
+let _sse         = null;
+let _refreshing  = false;
+let _reconnectMs = 2000; // backoff starts at 2s, caps at 30s
+
+function setLiveState(state) {
+  const indicator = document.getElementById('live-indicator');
+  const ping      = document.getElementById('live-ping');
+  const dot       = document.getElementById('live-dot-inner');
+  const label     = document.getElementById('live-label');
+  if (!indicator) return;
+
+  indicator.classList.remove('hidden');
+  if (state === 'live') {
+    indicator.style.background  = 'rgba(80,220,100,0.10)';
+    indicator.style.borderColor = 'rgba(80,220,100,0.25)';
+    if (ping)  { ping.style.background = '#50dc64'; ping.style.display = ''; }
+    if (dot)   dot.style.background    = '#50dc64';
+    if (label) { label.textContent = 'Live'; label.style.color = '#50dc64'; }
+  } else if (state === 'syncing') {
+    indicator.style.background  = 'rgba(239,159,39,0.10)';
+    indicator.style.borderColor = 'rgba(239,159,39,0.30)';
+    if (ping)  ping.style.background   = '#EF9F27';
+    if (dot)   dot.style.background    = '#EF9F27';
+    if (label) { label.textContent = 'Syncing'; label.style.color = '#EF9F27'; }
+  } else {
+    // offline / reconnecting
+    indicator.style.background  = 'rgba(255,180,171,0.08)';
+    indicator.style.borderColor = 'rgba(255,180,171,0.20)';
+    if (ping)  ping.style.display      = 'none';
+    if (dot)   dot.style.background    = '#ffb4ab';
+    if (label) { label.textContent = 'Offline'; label.style.color = '#ffb4ab'; }
+  }
+}
+
+function startSSE() {
+  if (_sse) { _sse.close(); _sse = null; }
+
+  _sse = new EventSource('/api/events');
+
+  _sse.addEventListener('open', () => {
+    _reconnectMs = 2000; // reset backoff on successful connect
+    setLiveState('live');
+  });
+
+  _sse.addEventListener('change', async () => {
+    if (_refreshing) return;
+    _refreshing = true;
+    setLiveState('syncing');
+    try {
+      await refreshAll();
+      await syncLogs();
+    } finally {
+      _refreshing = false;
+      setLiveState('live');
+    }
+  });
+
+  _sse.addEventListener('error', () => {
+    setLiveState('offline');
+    _sse.close();
+    _sse = null;
+    // Exponential backoff reconnect, capped at 30s
+    setTimeout(() => startSSE(), _reconnectMs);
+    _reconnectMs = Math.min(_reconnectMs * 2, 30000);
+  });
+}
+
+// Reconnect immediately when tab becomes visible again
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && (!_sse || _sse.readyState === EventSource.CLOSED)) {
+    startSSE();
+  }
+});
+</script>
+</body>
+</html>
